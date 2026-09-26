@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Acumulador de Luces - PWA Ready</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 9/16;
+            background: #222;
+            overflow: hidden;
+        }
+        video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        video {
+            display: none; /* Ocultamos el video nativo, procesamos vía canvas */
+        }
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+        button {
+            background: #ff4757;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button.secondary {
+            background: #57606f;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <button id="btnReset" class="secondary">Reiniciar</button>
+        <button id="btnCapture">Guardar Foto</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        let animationFrameId;
+        let isInitialized = false;
+
+        async function iniciarCamara() {
+            try {
+                // Solicitamos la cámara trasera preferiblemente
+                const constraints = {
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        resolve();
+                    };
+                });
+
+                // Ajustamos el tamaño real del canvas a la resolución del video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Limpiamos el canvas al inicio con negro absoluto
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                isInitialized = true;
+                procesarFrames();
+
+            } catch (error) {
+                console.error("Error al acceder a la cámara:", error);
+                alert("No se pudo acceder a la cámara. Asegúrate de dar permisos y usar HTTPS.");
+            }
+        }
+
+        function procesarFrames() {
+            if (!isInitialized) return;
+
+            // 1. Dibujamos el frame actual del video encima del canvas
+            // Configuramos el modo de fusión aditivo ('lighter') para sumar las luces brillantes
+            ctx.globalCompositeOperation = 'lighter';
+            
+            // Opcional: puedes bajar ligeramente la opacidad del frame actual (ej: 0.8) 
+            // para que los trazos antiguos se vayan desvaneciendo levemente con el tiempo.
+            // Si quieres que se acumule 100% sin borrarse, déjalo en 1.0.
+            ctx.globalAlpha = 0.85; 
+            
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // 2. Bucle para el siguiente frame
+            animationFrameId = requestAnimationFrame(procesarFrames);
+        }
+
+        // Botón para limpiar la acumulación
+        document.getElementById('btnReset').addEventListener('click', () => {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Botón para descargar el resultado actual en imagen
+        document.getElementById('btnCapture').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `light-trail-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        // Iniciar al cargar
+        iniciarCamara();
+    </script>
+</body>
+</html>
