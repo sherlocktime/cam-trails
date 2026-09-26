@@ -1,106 +1,100 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LightTrails Pro - Larga Exposición Móvil</title>
-    <!-- Tailwind CSS for modern responsive styling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LightTrails Pro - Larga Exposición</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for icons -->
+    <!-- FontAwesome icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
-            background-color: #050505;
+            background-color: #000;
             color: #ffffff;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             user-select: none;
             -webkit-user-select: none;
+            touch-action: manipulation;
         }
-        /* Custom smooth range slider styling */
+        /* Range slider styling */
         input[type=range] {
             -webkit-appearance: none;
-            background: rgba(255, 255, 255, 0.2);
-            height: 6px;
+            background: rgba(255, 255, 255, 0.25);
+            height: 5px;
             border-radius: 3px;
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 22px;
-            width: 22px;
+            height: 20px;
+            width: 20px;
             border-radius: 50%;
             background: #f59e0b;
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col overflow-hidden justify-between">
+<body class="h-[100dvh] w-screen flex flex-col overflow-hidden relative m-0 p-0">
 
-    <header class="flex justify-between items-center px-6 py-4 bg-black/40 backdrop-blur-md z-20 border-b border-white/10">
-        <div class="flex items-center space-x-2">
-            <i class="fa-solid fa-camera-rotate text-amber-400 text-xl"></i>
-            <span class="font-bold tracking-wider text-sm">LightTrails <span class="text-amber-400">PRO</span></span>
+    <!-- CAMERA BACKGROUND / FULLSCREEN VIEWPORT -->
+    <main class="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden z-0">
+        <video id="video" autoplay playsinline muted class="hidden"></video>
+        <canvas id="canvas" class="w-full h-full object-cover"></canvas>
+    </main>
+
+    <!-- FLOATING TOP HEADER OVERLAY -->
+    <header class="absolute top-0 left-0 right-0 px-4 pt-3 pb-2 flex justify-between items-center z-20 pointer-events-auto">
+        <div class="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-mono tracking-wide flex items-center space-x-2 shadow-lg">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
+            <span id="statusText" class="font-semibold text-neutral-200">LISTO</span>
         </div>
-        <div class="flex items-center space-x-3">
-            <button id="btnSwitchCamera" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center active:scale-95 transition">
-                <i class="fa-solid fa-sync text-sm"></i>
-            </button>
-        </div>
+        
+        <button id="btnSwitchCamera" class="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg">
+            <i class="fa-solid fa-camera-rotate text-sm"></i>
+        </button>
     </header>
 
-    <main class="relative flex-1 w-full bg-neutral-950 overflow-hidden flex items-center justify-center">
-        <!-- Hidden video stream element -->
-        <video id="video" autoplay playsinline muted class="hidden"></video>
+    <!-- FLOATING BOTTOM CONTROLS OVERLAY -->
+    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent backdrop-blur-[2px] z-20 flex flex-col space-y-3">
         
-        <!-- Interactive Canvas Viewport -->
-        <canvas id="canvas" class="w-full h-full object-cover"></canvas>
-
-        <!-- Live Status Badge / Overlays -->
-        <div id="statusBadge" class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono tracking-wide flex items-center space-x-2 z-10">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
-            <span id="statusText">LISTO PARA CAPTURAR</span>
-        </div>
-
         <!-- Progress bar during multi-frame stacking -->
-        <div id="progressContainer" class="absolute bottom-4 left-6 right-6 hidden z-10">
-            <div class="flex justify-between text-xs font-mono mb-1 text-amber-400">
-                <span id="progressLabel">Procesando exposición...</span>
+        <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
+            <div class="flex justify-between text-[11px] font-mono text-amber-400">
+                <span id="progressLabel">Exponiendo frames...</span>
                 <span id="progressPercent">0%</span>
             </div>
-            <div class="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+            <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
                 <div id="progressBar" class="bg-amber-500 h-full w-0 transition-all duration-75"></div>
             </div>
         </div>
-    </main>
 
-    <footer class="bg-black/80 backdrop-blur-lg px-6 py-6 border-t border-white/10 z-20 flex flex-col space-y-4">
-        
-        <!-- Controls: Frame Slider configuration -->
-        <div id="configPanel" class="flex flex-col space-y-2">
-            <div class="flex justify-between text-xs text-neutral-400 font-medium px-1">
-                <span>Número de Frames a Acumular</span>
+        <!-- Frame Slider Config -->
+        <div id="configPanel" class="flex flex-col space-y-1 bg-black/40 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10">
+            <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
+                <span>Frames a acumular</span>
                 <span id="frameCountValue" class="text-amber-400 font-bold font-mono">10 frames</span>
             </div>
             <input type="range" id="frameSlider" min="2" max="60" value="10" class="w-full">
         </div>
 
         <!-- Main Action Buttons Row -->
-        <div class="flex items-center justify-around px-4">
+        <div class="flex items-center justify-between px-2">
             <!-- Reset Button -->
-            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-300 hover:bg-neutral-700 active:scale-95 transition shadow-lg">
-                <i class="fa-solid fa-rotate-left text-lg"></i>
+            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-300 hover:bg-neutral-800 active:scale-95 transition shadow-lg">
+                <i class="fa-solid fa-rotate-left text-base"></i>
             </button>
 
             <!-- Shutter Button (Big Round Capture Button) -->
-            <button id="btnCapture" class="relative w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1 shadow-2xl active:scale-95 transition">
+            <button id="btnCapture" class="relative w-18 h-18 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition">
                 <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full transition-all duration-200 flex items-center justify-center shadow-inner">
-                    <i class="fa-solid fa-bolt text-white text-2xl"></i>
+                    <i class="fa-solid fa-bolt text-white text-xl"></i>
                 </div>
             </button>
 
             <!-- Download Button -->
-            <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500 hover:bg-neutral-700 active:scale-95 transition shadow-lg opacity-50 cursor-not-allowed">
-                <i class="fa-solid fa-download text-lg"></i>
+            <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed">
+                <i class="fa-solid fa-download text-base"></i>
             </button>
         </div>
     </footer>
@@ -119,24 +113,22 @@
         const btnSwitchCamera = document.getElementById('btnSwitchCamera');
         const statusText = document.getElementById('statusText');
         const statusDot = document.getElementById('statusDot');
-        const statusBadge = document.getElementById('statusBadge');
         const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
         const progressPercent = document.getElementById('progressPercent');
-        const progressLabel = document.getElementById('progressLabel');
         const configPanel = document.getElementById('configPanel');
 
-        let currentFacingMode = 'environment'; // Empezar con cámara trasera
+        let currentFacingMode = 'environment';
         let currentStream = null;
         let isCapturing = false;
         let previewAnimationId = null;
 
-        // Actualizar etiqueta del slider
+        // Actualizar etiqueta del slider en vivo
         frameSlider.addEventListener('input', (e) => {
             frameCountValue.textContent = `${e.target.value} frames`;
         });
 
-        // Inicializar o cambiar flujo de cámara con getUserMedia
+        // Inicializar o cambiar flujo de cámara
         async function initCamera() {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
@@ -161,21 +153,20 @@
                     };
                 });
 
-                // Ajustar resolución del canvas según dimensiones del video de la cámara
+                // Definir resolución del canvas
                 canvas.width = video.videoWidth || 1280;
                 canvas.height = video.videoHeight || 720;
 
-                // Iniciar loop de previsualización en vivo
                 startPreviewLoop();
 
             } catch (err) {
                 console.error("Error al acceder a la cámara:", err);
-                statusText.textContent = "ERROR DE CÁMARA (Permisos / HTTPS)";
+                statusText.textContent = "ERROR CÁMARA";
                 statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
             }
         }
 
-        // Loop para mostrar video en tiempo real antes de capturar
+        // Loop de previsualización en tiempo real
         function startPreviewLoop() {
             if (isCapturing) return;
 
@@ -189,34 +180,33 @@
             drawPreview();
         }
 
-        // Cambiar entre cámara frontal y trasera
+        // Cambiar cámara frontal / trasera
         btnSwitchCamera.addEventListener('click', () => {
             if (isCapturing) return;
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
             initCamera();
         });
 
-        // Botón de captura / obturador
+        // Botón de captura por lotes de frames
         btnCapture.addEventListener('click', async () => {
             if (isCapturing) return;
             
-            // Cancelar loop de previsualización
             if (previewAnimationId) {
                 cancelAnimationFrame(previewAnimationId);
             }
 
             isCapturing = true;
-            configPanel.style.opacity = '0.4';
+            configPanel.style.opacity = '0.3';
             configPanel.style.pointerEvents = 'none';
-            btnSwitchCamera.style.opacity = '0.4';
+            btnSwitchCamera.style.opacity = '0.3';
             btnSwitchCamera.style.pointerEvents = 'none';
             btnDownload.disabled = true;
-            btnDownload.classList.add('opacity-50', 'cursor-not-allowed');
+            btnDownload.classList.add('opacity-40', 'cursor-not-allowed');
 
             const targetFrames = parseInt(frameSlider.value);
             let capturedCount = 0;
 
-            // Preparar lienzo base negro para iniciar acumulación limpia
+            // Inicializar canvas limpio en negro
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1.0;
             ctx.fillStyle = '#000000';
@@ -227,16 +217,14 @@
             progressContainer.classList.remove('hidden');
             shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-ping";
 
-            // Intervalo o bucle controlado para capturar N frames consecutivos
             const captureInterval = setInterval(() => {
                 capturedCount++;
 
-                // Aplicar mezcla aditiva de luces ('lighter') para acumular estelas lumínicas
+                // Fusión aditiva 'lighter' para estelas de luz
                 ctx.globalCompositeOperation = 'lighter';
-                ctx.globalAlpha = 0.9; // Ligero factor de decaimiento para evitar saturación total en blanco
+                ctx.globalAlpha = 0.9;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                // Actualizar barra de progreso
                 const percent = Math.round((capturedCount / targetFrames) * 100);
                 progressBar.style.width = `${percent}%`;
                 progressPercent.textContent = `${percent}%`;
@@ -246,7 +234,7 @@
                     clearInterval(captureInterval);
                     finalizarCaptura();
                 }
-            }, 100); // Frecuencia de muestreo de frames (aprox 10 fps de captura para larga exposición limpia)
+            }, 100);
         });
 
         function finalizarCaptura() {
@@ -254,17 +242,16 @@
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
             progressContainer.classList.add('hidden');
             
-            statusText.textContent = "EXPOSICIÓN FINALIZADA";
+            statusText.textContent = "¡FOTO LISTA!";
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
 
-            // Habilitar controles y botón de descarga
             configPanel.style.opacity = '1';
             configPanel.style.pointerEvents = 'auto';
             btnSwitchCamera.style.opacity = '1';
             btnSwitchCamera.style.pointerEvents = 'auto';
 
             btnDownload.disabled = false;
-            btnDownload.classList.remove('opacity-50', 'cursor-not-allowed');
+            btnDownload.classList.remove('opacity-40', 'cursor-not-allowed');
             btnDownload.classList.add('text-white', 'bg-amber-600', 'hover:bg-amber-500');
         }
 
@@ -276,16 +263,16 @@
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            statusText.textContent = "LISTO PARA CAPTURAR";
+            statusText.textContent = "LISTO";
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
             btnDownload.disabled = true;
-            btnDownload.classList.add('opacity-50', 'cursor-not-allowed');
+            btnDownload.classList.add('opacity-40', 'cursor-not-allowed');
             btnDownload.classList.remove('text-white', 'bg-amber-600', 'hover:bg-amber-500');
             
             startPreviewLoop();
         });
 
-        // Botón de Descarga de Imagen
+        // Botón de Descarga
         btnDownload.addEventListener('click', () => {
             if (isCapturing || btnDownload.disabled) return;
             
@@ -296,7 +283,6 @@
             link.click();
         });
 
-        // Iniciar aplicación al cargar la ventana
         window.addEventListener('load', () => {
             initCamera();
         });
