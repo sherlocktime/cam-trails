@@ -42,28 +42,30 @@
         <canvas id="canvas" class="w-full h-full object-cover"></canvas>
     </main>
 
+    <!-- Header adaptable -->
     <header class="absolute top-0 left-0 right-0 px-4 pt-3 pb-2 flex justify-between items-center z-20 pointer-events-auto">
-        <div class="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono tracking-wide flex items-center space-x-2 shadow-lg">
+        <div class="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono tracking-wide flex items-center space-x-2 shadow-lg">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
             <span id="statusText" class="font-semibold text-neutral-200">VIVO</span>
         </div>
         
         <div class="flex items-center space-x-2">
             <!-- Blend Mode Switcher -->
-            <button id="btnBlendMode" class="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono text-amber-400 font-semibold shadow-lg active:scale-95 transition">
+            <button id="btnBlendMode" class="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono text-amber-400 font-semibold shadow-lg active:scale-95 transition">
                 MODO: <span id="blendModeLabel">Lighter</span>
             </button>
             <!-- Switch Camera Button -->
-            <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg">
+            <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg">
                 <i class="fa-solid fa-camera-rotate text-xs"></i>
             </button>
         </div>
     </header>
 
-    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent backdrop-blur-[2px] z-20 flex flex-col space-y-3">
+    <!-- Footer adaptable a vertical y horizontal -->
+    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-5 pt-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent backdrop-blur-[2px] z-25 flex flex-col space-y-2.5">
         
         <!-- Progress bar during multi-frame stacking -->
-        <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
+        <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/70 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
             <div class="flex justify-between text-[11px] font-mono text-amber-400">
                 <span id="progressLabel">Apilando frames...</span>
                 <span id="progressPercent">0%</span>
@@ -73,33 +75,36 @@
             </div>
         </div>
 
-        <!-- Frame Slider Config -->
-        <div id="configPanel" class="flex flex-col space-y-1 bg-black/40 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10">
-            <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                <span>Frames a acumular</span>
-                <span id="frameCountValue" class="text-amber-400 font-bold font-mono">20 frames</span>
-            </div>
-            <input type="range" id="frameSlider" min="5" max="90" value="20" class="w-full">
-        </div>
-
-        <!-- Main Action Buttons Row -->
-        <div class="flex items-center justify-between px-2">
-            <!-- Reset / Stream Live Button -->
-            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-300 hover:bg-neutral-800 active:scale-95 transition shadow-lg" title="Volver a Stream en vivo">
-                <i class="fa-solid fa-video text-base"></i>
-            </button>
-
-            <!-- Shutter Button (Big Round Capture Button) -->
-            <button id="btnCapture" class="relative w-18 h-18 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition">
-                <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full transition-all duration-200 flex items-center justify-center shadow-inner">
-                    <i class="fa-solid fa-bolt text-white text-xl"></i>
+        <!-- Contenedor inferior: se adapta según orientación mediante clases o diseño flexible -->
+        <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+            <!-- Frame Slider Config -->
+            <div id="configPanel" class="w-full md:flex-1 flex flex-col space-y-1 bg-black/50 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10">
+                <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
+                    <span>Frames a acumular</span>
+                    <span id="frameCountValue" class="text-amber-400 font-bold font-mono">20 frames</span>
                 </div>
-            </button>
+                <input type="range" id="frameSlider" min="5" max="90" value="20" class="w-full">
+            </div>
 
-            <!-- Download Button -->
-            <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar Foto">
-                <i class="fa-solid fa-download text-base"></i>
-            </button>
+            <!-- Main Action Buttons Row -->
+            <div class="w-full md:w-auto flex items-center justify-around md:justify-center space-x-4 px-2">
+                <!-- Reset / Stream Live Button -->
+                <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-300 hover:bg-neutral-800 active:scale-95 transition shadow-lg" title="Volver a Stream en vivo">
+                    <i class="fa-solid fa-video text-base"></i>
+                </button>
+
+                <!-- Shutter Button (Big Round Capture Button) -->
+                <button id="btnCapture" class="relative w-16 h-16 md:w-18 md:h-18 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition">
+                    <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full transition-all duration-200 flex items-center justify-center shadow-inner">
+                        <i class="fa-solid fa-bolt text-white text-lg md:text-xl"></i>
+                    </div>
+                </button>
+
+                <!-- Download Button -->
+                <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar Foto">
+                    <i class="fa-solid fa-download text-base"></i>
+                </button>
+            </div>
         </div>
     </footer>
 
@@ -128,15 +133,14 @@
         let currentStream = null;
         let isCapturing = false;
         let isLivePreview = true;
-        let currentBlendMode = 'lighter'; // 'lighter' or 'screen'
-        let videoFrameCallbackId = null;
+        let currentBlendMode = 'lighter'; 
 
         // Actualizar etiqueta del slider
         frameSlider.addEventListener('input', (e) => {
             frameCountValue.textContent = `${e.target.value} frames`;
         });
 
-        // Alternar modos de mezcla (lighter vs screen)
+        // Alternar modos de mezcla
         btnBlendMode.addEventListener('click', () => {
             if (currentBlendMode === 'lighter') {
                 currentBlendMode = 'screen';
@@ -149,18 +153,22 @@
             }
         });
 
-        // Inicializar cámara con petición de 60 FPS y restricciones óptimas
+        // Inicializar cámara adaptándose a la orientación actual (Vertical u Horizontal)
         async function initCamera() {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
             }
 
             try {
+                // Detectar si el dispositivo está en horizontal o vertical en este instante
+                const isLandscape = window.innerWidth > window.innerHeight;
+                
                 const constraints = {
                     video: {
                         facingMode: { ideal: currentFacingMode },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
+                        // Pedir resolución adaptada a la orientación actual
+                        width: { ideal: isLandscape ? 1280 : 720 },
+                        height: { ideal: isLandscape ? 720 : 1280 },
                         frameRate: { ideal: 60, min: 30 }
                     },
                     audio: false
@@ -175,9 +183,7 @@
                     };
                 });
 
-                canvas.width = video.videoWidth || 1280;
-                canvas.height = video.videoHeight || 720;
-
+                updateCanvasDimensions();
                 startLiveStream();
 
             } catch (err) {
@@ -187,7 +193,26 @@
             }
         }
 
-        // Bucle de previsualización en vivo usando requestVideoFrameCallback o fallback
+        function updateCanvasDimensions() {
+            if (video.videoWidth && video.videoHeight) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            } else {
+                const isLandscape = window.innerWidth > window.innerHeight;
+                canvas.width = isLandscape ? 1280 : 720;
+                canvas.height = isLandscape ? 720 : 1280;
+            }
+        }
+
+        // Detectar cuando el usuario gira el celular para reajustar el canvas al instante
+        window.addEventListener('resize', () => {
+            // Breve timeout para asegurar que el navegador calculó las nuevas dimensiones de pantalla
+            setTimeout(() => {
+                updateCanvasDimensions();
+            }, 200);
+        });
+
+        // Bucle de previsualización en vivo
         function startLiveStream() {
             isLivePreview = true;
             isCapturing = false;
@@ -222,7 +247,7 @@
             initCamera();
         });
 
-        // Iniciar captura por lotes con apilamiento en tiempo real
+        // Iniciar captura por lotes con apilamiento
         btnCapture.addEventListener('click', () => {
             if (isCapturing) return;
 
@@ -239,7 +264,6 @@
             const targetFrames = parseInt(frameSlider.value);
             let capturedCount = 0;
 
-            // Limpiar canvas a negro absoluto antes de iniciar la exposición
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1.0;
             ctx.fillStyle = '#000000';
@@ -250,13 +274,11 @@
             progressContainer.classList.remove('hidden');
             shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-ping";
 
-            // Bucle de muestreo sincronizado para apilamiento de frames
             function processCaptureFrame(now, metadata) {
                 if (!isCapturing) return;
 
                 capturedCount++;
 
-                // Aplicar modo de fusión seleccionado ('lighter' o 'screen')
                 ctx.globalCompositeOperation = currentBlendMode;
                 ctx.globalAlpha = 0.9;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -304,7 +326,6 @@
             btnDownload.classList.add('text-white', 'bg-amber-600', 'hover:bg-amber-500');
         }
 
-        // Botón Reset / Volver al Stream en vivo
         btnReset.addEventListener('click', () => {
             isCapturing = false;
             progressContainer.classList.add('hidden');
@@ -322,7 +343,6 @@
             startLiveStream();
         });
 
-        // Botón de Descarga
         btnDownload.addEventListener('click', () => {
             if (isCapturing || btnDownload.disabled) return;
             
@@ -333,19 +353,9 @@
             link.click();
         });
 
-        // Iniciar al cargar la ventana
         window.addEventListener('load', () => {
             initCamera();
         });
     </script>
 </body>
 </html>
-```
-eof
-
-### Resumen de características generadas:
-1. **Layout Inmersivo a Pantalla Completa:** Utiliza `100dvh` y `viewport-fit=cover` para garantizar un aspecto nativo sin barras de desplazamiento en móviles.
-2. **Sincronización Avanzada:** Implementa `requestVideoFrameCallback` con alternativa a `requestAnimationFrame` para un rendimiento fluido y eficiente directo de los fotogramas del sensor de la cámara.
-3. **Modos de Fusión Profesionales:** Selector táctil para alternar en vivo entre **`Lighter`** (suma aditiva intensa) y **`Screen`** (trama suave).
-4. **Control Deslizante de Exposición:** Ajusta dinámicamente de 5 a 90 frames a apilar.
-5. **Botón de Retorno al Stream (Vivo):** Permite reiniciar y volver a ver la vista previa de la cámara en cualquier momento de forma instantánea.
