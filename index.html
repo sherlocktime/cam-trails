@@ -293,10 +293,10 @@
             const activeBlendMode = blendModes[currentBlendIndex].mode;
             let capturedCount = 0;
 
-            // Fondo blanco para Color Dodge, negro para los demás
+            // Fondo Pleno
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1.0;
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             statusText.textContent = `EXPONIENDO (0/${targetFrames})`;
