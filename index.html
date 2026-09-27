@@ -325,7 +325,7 @@
                 const percent = Math.round((capturedCount / targetFrames) * 100);
                 progressBar.style.width = `${percent}%`;
                 progressPercent.textContent = `${percent}%`;
-                statusText.textContent = `EXPONIENDO (${capturedCount}/${targetFrames})`;
+                statusText.textContent = `(${capturedCount}/${targetFrames})`;
 
                 if (capturedCount >= targetFrames) {
                     finalizarCaptura();
