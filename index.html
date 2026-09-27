@@ -47,7 +47,7 @@
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
             <span id="statusText" class="font-semibold text-neutral-200">VIVO</span>
         </div>
-
+        
         <div class="flex items-center space-x-2">
             <!-- Blend Mode Switcher -->
             <button id="btnBlendMode" class="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono text-amber-400 font-semibold shadow-lg active:scale-95 transition">
@@ -65,7 +65,7 @@
     </header>
 
     <footer class="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent backdrop-blur-[2px] z-20 flex flex-col space-y-3">
-
+        
         <!-- Progress bar during multi-frame stacking -->
         <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
             <div class="flex justify-between text-[11px] font-mono text-amber-400">
@@ -94,7 +94,7 @@
                     <span>Opacidad por frame</span>
                     <span id="opacityValue" class="text-amber-400 font-bold font-mono">80%</span>
                 </div>
-                <input type="range" id="opacitySlider" min="10" max="100" value="80" class="w-full">
+                <input type="range" id="opacitySlider" min="5" max="100" value="80" class="w-full">
             </div>
 
             <!-- Resolution Selector Buttons -->
@@ -159,8 +159,14 @@
         let currentStream = null;
         let isCapturing = false;
         let isLivePreview = true;
-        let currentBlendMode = 'lighter';
-        let targetResolution = { width: 1280, height: 720 }; // Por defecto 720p
+        
+        // Modos de mezcla disponibles rotativos: 'lighter', 'screen', 'source-over' (Ghost)
+        let blendModes = [
+            { name: 'Lighter', mode: 'lighter', class: 'text-amber-400 font-bold' },
+            { name: 'Screen', mode: 'screen', class: 'text-cyan-400 font-bold' },
+            { name: 'Ghost', mode: 'source-over', class: 'text-emerald-400 font-bold' }
+        ];
+        let currentBlendIndex = 0;
 
         // Actualizar etiqueta del slider de frames
         frameSlider.addEventListener('input', (e) => {
@@ -188,6 +194,16 @@
             btnRes720.className = "px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-neutral-300 transition";
             initCamera();
         });
+        
+        let targetResolution = { width: 1280, height: 720 };
+
+        // Rotar entre los modos de mezcla al hacer clic
+        btnBlendMode.addEventListener('click', () => {
+            currentBlendIndex = (currentBlendIndex + 1) % blendModes.length;
+            const current = blendModes[currentBlendIndex];
+            blendModeLabel.textContent = current.name;
+            blendModeLabel.className = current.class;
+        });
 
         // Lógica de Pantalla Completa
         btnFullscreen.addEventListener('click', () => {
@@ -208,19 +224,6 @@
                 icon.className = "fa-solid fa-compress text-xs";
             } else {
                 icon.className = "fa-solid fa-expand text-xs";
-            }
-        });
-
-        // Alternar modos de mezcla (lighter vs screen)
-        btnBlendMode.addEventListener('click', () => {
-            if (currentBlendMode === 'lighter') {
-                currentBlendMode = 'screen';
-                blendModeLabel.textContent = 'Screen';
-                blendModeLabel.className = 'text-cyan-400 font-bold';
-            } else {
-                currentBlendMode = 'lighter';
-                blendModeLabel.textContent = 'Lighter';
-                blendModeLabel.className = 'text-amber-400 font-bold';
             }
         });
 
@@ -300,7 +303,7 @@
             initCamera();
         });
 
-        // Iniciar captura por lotes con opacidad personalizada
+        // Iniciar captura por lotes con opacidad y modo de mezcla seleccionados
         btnCapture.addEventListener('click', () => {
             if (isCapturing) return;
 
@@ -317,10 +320,11 @@
             btnDownload.classList.add('opacity-40', 'cursor-not-allowed');
 
             const targetFrames = parseInt(frameSlider.value);
-            const frameAlpha = parseInt(opacitySlider.value) / 100; // Convertir slider a decimal (0.1 a 1.0)
+            const frameAlpha = parseInt(opacitySlider.value) / 100;
+            const activeBlendMode = blendModes[currentBlendIndex].mode;
             let capturedCount = 0;
 
-            // Limpiar canvas a negro absoluto antes de iniciar
+            // Limpiar canvas a negro absoluto antes de iniciar (o puedes dejar el primer frame de base)
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1.0;
             ctx.fillStyle = '#000000';
@@ -336,9 +340,9 @@
 
                 capturedCount++;
 
-                // Aplicar modo de fusión seleccionado y opacidad configurada
-                ctx.globalCompositeOperation = currentBlendMode;
-                ctx.globalAlpha = frameAlpha;
+                // Aplicar el modo de fusión elegido (Lighter, Screen o Ghost/source-over) con su opacidad
+                ctx.globalCompositeOperation = activeBlendMode;
+                ctx.globalAlpha = frameAlpha; 
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
                 const percent = Math.round((capturedCount / targetFrames) * 100);
@@ -370,7 +374,7 @@
             isCapturing = false;
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
             progressContainer.classList.add('hidden');
-
+            
             statusText.textContent = "¡FOTO LISTA!";
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
 
@@ -391,7 +395,7 @@
             isCapturing = false;
             progressContainer.classList.add('hidden');
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
-
+            
             configPanel.style.opacity = '1';
             configPanel.style.pointerEvents = 'auto';
             btnSwitchCamera.style.opacity = '1';
@@ -409,7 +413,7 @@
         // Botón de Descarga
         btnDownload.addEventListener('click', () => {
             if (isCapturing || btnDownload.disabled) return;
-
+            
             const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
             const link = document.createElement('a');
             link.download = `LightTrail_${Date.now()}.jpg`;
