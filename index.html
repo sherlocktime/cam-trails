@@ -274,7 +274,7 @@
 
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1.0;
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = (activeBlendMode === 'color-dodge') ? '#ffffff' : '#000000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             function renderLiveFrame(now, metadata) {
