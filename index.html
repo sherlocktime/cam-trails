@@ -160,11 +160,12 @@
         let isCapturing = false;
         let isLivePreview = true;
         
-        // Modos de mezcla disponibles rotativos: 'lighter', 'screen', 'source-over' (Ghost)
+        // 4 Modos de mezcla rotativos: Lighter, Screen, Ghost (source-over), Color Dodge
         let blendModes = [
             { name: 'Lighter', mode: 'lighter', class: 'text-amber-400 font-bold' },
             { name: 'Screen', mode: 'screen', class: 'text-cyan-400 font-bold' },
-            { name: 'Ghost', mode: 'source-over', class: 'text-emerald-400 font-bold' }
+            { name: 'Ghost', mode: 'source-over', class: 'text-emerald-400 font-bold' },
+            { name: 'Color Dodge', mode: 'color-dodge', class: 'text-fuchsia-400 font-bold' }
         ];
         let currentBlendIndex = 0;
 
@@ -197,7 +198,7 @@
         
         let targetResolution = { width: 1280, height: 720 };
 
-        // Rotar entre los modos de mezcla al hacer clic
+        // Rotar entre los 4 modos de mezcla al hacer clic
         btnBlendMode.addEventListener('click', () => {
             currentBlendIndex = (currentBlendIndex + 1) % blendModes.length;
             const current = blendModes[currentBlendIndex];
@@ -303,7 +304,7 @@
             initCamera();
         });
 
-        // Iniciar captura por lotes con opacidad y modo de mezcla seleccionados
+        // Iniciar captura por lotes
         btnCapture.addEventListener('click', () => {
             if (isCapturing) return;
 
@@ -324,7 +325,7 @@
             const activeBlendMode = blendModes[currentBlendIndex].mode;
             let capturedCount = 0;
 
-            // Limpiar canvas a negro absoluto antes de iniciar (o puedes dejar el primer frame de base)
+            // Limpiar canvas a negro absoluto antes de iniciar
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1.0;
             ctx.fillStyle = '#000000';
@@ -340,7 +341,6 @@
 
                 capturedCount++;
 
-                // Aplicar el modo de fusión elegido (Lighter, Screen o Ghost/source-over) con su opacidad
                 ctx.globalCompositeOperation = activeBlendMode;
                 ctx.globalAlpha = frameAlpha; 
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
