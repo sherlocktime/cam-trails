@@ -47,7 +47,7 @@
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
             <span id="statusText" class="font-semibold text-neutral-200">VIVO</span>
         </div>
-        
+
         <div class="flex items-center space-x-2">
             <!-- Blend Mode Switcher -->
             <button id="btnBlendMode" class="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono text-amber-400 font-semibold shadow-lg active:scale-95 transition">
@@ -65,7 +65,7 @@
     </header>
 
     <footer class="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent backdrop-blur-[2px] z-20 flex flex-col space-y-3">
-        
+
         <!-- Progress bar during multi-frame stacking -->
         <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
             <div class="flex justify-between text-[11px] font-mono text-amber-400">
@@ -322,7 +322,7 @@
             isCapturing = false;
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
             progressContainer.classList.add('hidden');
-            
+
             statusText.textContent = "¡FOTO LISTA!";
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
 
@@ -343,7 +343,7 @@
             isCapturing = false;
             progressContainer.classList.add('hidden');
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
-            
+
             configPanel.style.opacity = '1';
             configPanel.style.pointerEvents = 'auto';
             btnSwitchCamera.style.opacity = '1';
@@ -361,12 +361,23 @@
         // Botón de Descarga
         btnDownload.addEventListener('click', () => {
             if (isCapturing || btnDownload.disabled) return;
-            
+
             const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
             const link = document.createElement('a');
             link.download = `LightTrail_${Date.now()}.jpg`;
             link.href = dataUrl;
             link.click();
+        });
+
+        // Actualizar dimensiones del canvas si la pantalla gira o cambia de tamaño
+        window.addEventListener('resize', () => {
+            if (video.videoWidth && video.videoHeight) {
+                // Solo actualizar si estamos en modo vivo para no romper un apilamiento en curso
+                if (isLivePreview) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                }
+            }
         });
 
         // Iniciar al cargar la ventana
