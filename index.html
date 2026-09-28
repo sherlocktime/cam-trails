@@ -60,10 +60,8 @@
         </div>
     </header>
 
-    <!-- FOOTER ADAPTATIVO: Columna en vertical, 2 columnas en apaisado (landscape) -->
     <footer class="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 landscape:pb-3 landscape:px-6 backdrop-blur-[2px] z-20 flex flex-col landscape:flex-row landscape:justify-between landscape:items-end space-y-3 landscape:space-y-0">
 
-        <!-- Contenedor izquierdo en landscape (Sliders y barra de progreso) -->
         <div class="flex flex-col space-y-2 w-full landscape:w-72">
             <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
                 <div class="flex justify-between text-[11px] font-mono text-amber-400">
@@ -102,7 +100,6 @@
             </div>
         </div>
 
-        <!-- Contenedor derecho en landscape (Botones de acción principales) -->
         <div class="flex items-center justify-between landscape:justify-end landscape:space-x-4 px-2 landscape:px-0">
             <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-300 hover:bg-neutral-800 active:scale-95 transition shadow-lg" title="Volver a Stream en vivo">
                 <i class="fa-solid fa-xmark text-base"></i>
@@ -110,7 +107,7 @@
 
             <button id="btnCapture" class="relative w-20 h-20 landscape:w-20 landscape:h-20 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition flex-shrink-0">
                 <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full transition-all duration-200 flex items-center justify-center shadow-inner">
-                    <i class="fa-solid fa-bolt text-white text-xl leading-none"></i>
+                    <i id="shutterIcon" class="fa-solid fa-bolt text-white text-xl leading-none transition-opacity duration-200"></i>
                 </div>
             </button>
 
@@ -134,6 +131,7 @@
 
         const btnCapture = document.getElementById('btnCapture');
         const shutterInner = document.getElementById('shutterInner');
+        const shutterIcon = document.getElementById('shutterIcon'); // Referencia al ícono para ocultarlo
         const btnReset = document.getElementById('btnReset');
         const btnDownload = document.getElementById('btnDownload');
         const btnSwitchCamera = document.getElementById('btnSwitchCamera');
@@ -154,11 +152,11 @@
         let targetResolution = { width: 1280, height: 720 };
 
         let blendModes = [
-            { name: 'Lighten', mode: 'lighten', class: 'text-indigo-300 font-bold' },   // Nocturno: Azul índigo profundo/místico
-            { name: 'Screen', mode: 'screen', class: 'text-cyan-300 font-bold' },       // Nocturno: Cian luminoso (ideal para estrellas/luces)
-            { name: 'Ghost', mode: 'source-over', class: 'text-emerald-400 font-bold' }, // Creativo/Especial: Esmeralda moderno
-            { name: 'SoftLight', mode: 'soft-light', class: 'text-amber-400 font-bold' }, // Diurno/Suave: Ámbar cálido
-            { name: 'Darken', mode: 'darken', class: 'text-rose-400 font-bold' }        // Diurno/Oscurecer: Rosa/Rojo suave
+            { name: 'Lighten', mode: 'lighten', class: 'text-indigo-300 font-bold' },
+            { name: 'Screen', mode: 'screen', class: 'text-cyan-300 font-bold' },
+            { name: 'Ghost', mode: 'source-over', class: 'text-emerald-400 font-bold' },
+            { name: 'SoftLight', mode: 'soft-light', class: 'text-amber-400 font-bold' },
+            { name: 'Darken', mode: 'darken', class: 'text-rose-400 font-bold' }
         ];
         let currentBlendIndex = 0;
 
@@ -307,7 +305,10 @@
             statusText.textContent = `(0/${targetFrames})`;
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
             progressContainer.classList.remove('hidden');
-            shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all";
+            
+            // Se mantiene flex, items-center y justify-center para evitar desplazamiento, y se oculta el ícono con opacity-0
+            shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all flex items-center justify-center";
+            shutterIcon.classList.add('opacity-0'); // Oculta el ícono mientras captura
 
             function processCaptureFrame(now, metadata) {
                 if (!isCapturing) return;
@@ -352,6 +353,7 @@
         function finalizarCaptura() {
             isCapturing = false;
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
+            shutterIcon.classList.remove('opacity-0'); // Vuelve a mostrar el ícono al terminar
             progressContainer.classList.add('hidden');
 
             statusText.textContent = "HECHO";
@@ -373,6 +375,7 @@
             isCapturing = false;
             progressContainer.classList.add('hidden');
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
+            shutterIcon.classList.remove('opacity-0'); // Asegura que se muestre el ícono
 
             configPanel.style.opacity = '1';
             configPanel.style.pointerEvents = 'auto';
