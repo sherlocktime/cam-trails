@@ -60,45 +60,50 @@
         </div>
     </header>
 
-    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-3 backdrop-blur-[2px] z-20 flex flex-col space-y-3">
+    <!-- FOOTER ADAPTATIVO: Columna en vertical, 2 columnas en apaisado (landscape) -->
+    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 landscape:pb-3 landscape:px-6 backdrop-blur-[2px] z-20 flex flex-col landscape:flex-row landscape:justify-between landscape:items-end space-y-3 landscape:space-y-0">
 
-        <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
-            <div class="flex justify-between text-[11px] font-mono text-amber-400">
-                <span id="progressLabel">Apilando frames...</span>
-                <span id="progressPercent">0%</span>
+        <!-- Contenedor izquierdo en landscape (Sliders y barra de progreso) -->
+        <div class="flex flex-col space-y-2 w-full landscape:w-72">
+            <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
+                <div class="flex justify-between text-[11px] font-mono text-amber-400">
+                    <span id="progressLabel">Apilando frames...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
+                    <div id="progressBar" class="bg-amber-500 h-full w-0 transition-all duration-75"></div>
+                </div>
             </div>
-            <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                <div id="progressBar" class="bg-amber-500 h-full w-0 transition-all duration-75"></div>
+
+            <div id="configPanel" class="flex flex-col space-y-2 bg-black/50 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 shadow-xl">
+                <div class="flex flex-col space-y-0.5">
+                    <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
+                        <span>Frames a acumular</span>
+                        <span id="frameCountValue" class="text-amber-400 font-bold font-mono">15 frames</span>
+                    </div>
+                    <input type="range" id="frameSlider" min="5" max="100" value="15" class="w-full">
+                </div>
+
+                <div class="flex flex-col space-y-0.5">
+                    <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
+                        <span>Opacidad por frame</span>
+                        <span id="opacityValue" class="text-amber-400 font-bold font-mono">50%</span>
+                    </div>
+                    <input type="range" id="opacitySlider" min="5" max="100" value="50" class="w-full">
+                </div>
+
+                <div class="flex items-center justify-between pt-1 border-t border-white/10">
+                    <span class="text-[11px] text-neutral-400 font-medium">Resolución:</span>
+                    <div class="flex space-x-1.5">
+                        <button id="btnRes720" class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500 text-black transition">720p</button>
+                        <button id="btnRes1080" class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-neutral-300 transition">1080p</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div id="configPanel" class="flex flex-col space-y-2 bg-black/50 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 shadow-xl">
-            <div class="flex flex-col space-y-0.5">
-                <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                    <span>Frames a acumular</span>
-                    <span id="frameCountValue" class="text-amber-400 font-bold font-mono">15 frames</span>
-                </div>
-                <input type="range" id="frameSlider" min="5" max="100" value="15" class="w-full">
-            </div>
-
-            <div class="flex flex-col space-y-0.5">
-                <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                    <span>Opacidad por frame</span>
-                    <span id="opacityValue" class="text-amber-400 font-bold font-mono">50%</span>
-                </div>
-                <input type="range" id="opacitySlider" min="5" max="100" value="50" class="w-full">
-            </div>
-
-            <div class="flex items-center justify-between pt-1 border-t border-white/10">
-                <span class="text-[11px] text-neutral-400 font-medium">Resolución:</span>
-                <div class="flex space-x-1.5">
-                    <button id="btnRes720" class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500 text-black transition">720p</button>
-                    <button id="btnRes1080" class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-neutral-300 transition">1080p</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex items-center justify-between px-2">
+        <!-- Contenedor derecho en landscape (Botones de acción principales) -->
+        <div class="flex items-center justify-between landscape:justify-end landscape:space-x-4 px-2 landscape:px-0">
             <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-300 hover:bg-neutral-800 active:scale-95 transition shadow-lg" title="Volver a Stream en vivo">
                 <i class="fa-solid fa-xmark text-base"></i>
             </button>
@@ -294,7 +299,6 @@
             const activeBlendMode = blendModes[currentBlendIndex].mode;
             let capturedCount = 0;
 
-            // Fondo Pleno
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1.0;
             ctx.fillStyle = '#000000';
@@ -310,8 +314,6 @@
 
                 capturedCount++;
 
-                // Truco para la primera imagen: si es la primera, la pintamos con opacidad completa (1.0)
-                // para que sirva de base sólida sin quemar, y las siguientes usan la opacidad del slider.
                 if (capturedCount === 1) {
                     ctx.globalCompositeOperation = 'source-over';
                     ctx.globalAlpha = 1.0;
