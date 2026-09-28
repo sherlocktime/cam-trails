@@ -3,7 +3,7 @@
   "short_name": "Re-Trazado",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#121212",
+  "background_color": "#eeeeee",
   "theme_color": "#121212",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
