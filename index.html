@@ -136,7 +136,7 @@
 
         const btnCapture = document.getElementById('btnCapture');
         const shutterInner = document.getElementById('shutterInner');
-        const shutterIcon = document.getElementById('shutterIcon'); // Referencia al ícono para ocultarlo
+        const shutterIcon = document.getElementById('shutterIcon');
         const btnReset = document.getElementById('btnReset');
         const btnDownload = document.getElementById('btnDownload');
         const btnSwitchCamera = document.getElementById('btnSwitchCamera');
@@ -261,7 +261,14 @@
 
                 ctx.globalCompositeOperation = 'source-over';
                 ctx.globalAlpha = 1.0;
+
+                ctx.save();
+                if (currentFacingMode === 'user') {
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                }
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
 
                 if ('requestVideoFrameCallback' in video) {
                     video.requestVideoFrameCallback(renderLiveFrame);
@@ -311,9 +318,8 @@
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
             progressContainer.classList.remove('hidden');
 
-            // Se mantiene flex, items-center y justify-center para evitar desplazamiento, y se oculta el ícono con opacity-0
             shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all flex items-center justify-center";
-            shutterIcon.classList.add('opacity-0'); // Oculta el ícono mientras captura
+            shutterIcon.classList.add('opacity-0');
 
             function processCaptureFrame(now, metadata) {
                 if (!isCapturing) return;
@@ -328,7 +334,13 @@
                     ctx.globalAlpha = frameAlpha;
                 }
 
+                ctx.save();
+                if (currentFacingMode === 'user') {
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                }
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
 
                 const percent = Math.round((capturedCount / targetFrames) * 100);
                 progressBar.style.width = `${percent}%`;
@@ -358,7 +370,7 @@
         function finalizarCaptura() {
             isCapturing = false;
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
-            shutterIcon.classList.remove('opacity-0'); // Vuelve a mostrar el ícono al terminar
+            shutterIcon.classList.remove('opacity-0');
             progressContainer.classList.add('hidden');
 
             statusText.textContent = "HECHO";
@@ -380,7 +392,7 @@
             isCapturing = false;
             progressContainer.classList.add('hidden');
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
-            shutterIcon.classList.remove('opacity-0'); // Asegura que se muestre el ícono
+            shutterIcon.classList.remove('opacity-0');
 
             configPanel.style.opacity = '1';
             configPanel.style.pointerEvents = 'auto';
