@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Re-trazado - Larga Exposición</title>
+    <title>Re-Trazado</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+
     <style>
         body {
             background-color: #000;
@@ -305,7 +310,7 @@
             statusText.textContent = `(0/${targetFrames})`;
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
             progressContainer.classList.remove('hidden');
-            
+
             // Se mantiene flex, items-center y justify-center para evitar desplazamiento, y se oculta el ícono con opacity-0
             shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all flex items-center justify-center";
             shutterIcon.classList.add('opacity-0'); // Oculta el ícono mientras captura
