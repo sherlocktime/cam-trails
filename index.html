@@ -307,7 +307,7 @@
             statusText.textContent = `(0/${targetFrames})`;
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
             progressContainer.classList.remove('hidden');
-            shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-ping";
+            shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all";
 
             function processCaptureFrame(now, metadata) {
                 if (!isCapturing) return;
@@ -351,7 +351,7 @@
 
         function finalizarCaptura() {
             isCapturing = false;
-            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
+            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
             progressContainer.classList.add('hidden');
 
             statusText.textContent = "HECHO";
@@ -372,7 +372,7 @@
         btnReset.addEventListener('click', () => {
             isCapturing = false;
             progressContainer.classList.add('hidden');
-            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
+            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
 
             configPanel.style.opacity = '1';
             configPanel.style.pointerEvents = 'auto';
