@@ -48,7 +48,7 @@
         </div>
 
         <div class="flex items-center space-x-2">
-            <button id="btnBlendMode" class="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono text-blue-400 font-semibold shadow-lg active:scale-95 transition">
+            <button id="btnBlendMode" class="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono text-indigo-400 font-semibold shadow-lg active:scale-95 transition">
                 MODO: <span id="blendModeLabel">Lighten</span>
             </button>
             <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
@@ -108,7 +108,7 @@
                 <i class="fa-solid fa-xmark text-base"></i>
             </button>
 
-            <button id="btnCapture" class="relative w-18 h-18 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition">
+            <button id="btnCapture" class="relative w-20 h-20 landscape:w-20 landscape:h-20 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition flex-shrink-0">
                 <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full transition-all duration-200 flex items-center justify-center shadow-inner">
                     <i class="fa-solid fa-bolt text-white text-xl"></i>
                 </div>
@@ -154,11 +154,11 @@
         let targetResolution = { width: 1280, height: 720 };
 
         let blendModes = [
-            { name: 'Lighten', mode: 'lighten', class: 'text-blue-400 font-bold' },
-            { name: 'Screen', mode: 'screen', class: 'text-cyan-400 font-bold' },
-            { name: 'Ghost', mode: 'source-over', class: 'text-emerald-400 font-bold' },
-            { name: 'SoftLight', mode: 'soft-light', class: 'text-amber-400 font-bold' },
-            { name: 'Darken', mode: 'darken', class: 'text-fuchsia-400 font-bold' }
+            { name: 'Lighten', mode: 'lighten', class: 'text-indigo-300 font-bold' },   // Nocturno: Azul índigo profundo/místico
+            { name: 'Screen', mode: 'screen', class: 'text-cyan-300 font-bold' },       // Nocturno: Cian luminoso (ideal para estrellas/luces)
+            { name: 'Ghost', mode: 'source-over', class: 'text-emerald-400 font-bold' }, // Creativo/Especial: Esmeralda moderno
+            { name: 'SoftLight', mode: 'soft-light', class: 'text-amber-400 font-bold' }, // Diurno/Suave: Ámbar cálido
+            { name: 'Darken', mode: 'darken', class: 'text-rose-400 font-bold' }        // Diurno/Oscurecer: Rosa/Rojo suave
         ];
         let currentBlendIndex = 0;
 
@@ -354,7 +354,7 @@
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
             progressContainer.classList.add('hidden');
 
-            statusText.textContent = "¡LISTO!";
+            statusText.textContent = "HECHO";
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
 
             configPanel.style.opacity = '1';
