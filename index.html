@@ -228,6 +228,8 @@
                 currentStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = currentStream;
 
+                await video.play();
+
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => resolve();
                 });
@@ -369,6 +371,8 @@
 
         function finalizarCaptura() {
             isCapturing = false;
+            video.pause();
+
             shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
             shutterIcon.classList.remove('opacity-0');
             progressContainer.classList.add('hidden');
