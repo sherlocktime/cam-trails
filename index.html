@@ -290,8 +290,16 @@
             initCamera();
         });
 
-        btnCapture.addEventListener('click', () => {
+        btnCapture.addEventListener('click', async () => {
             if (isCapturing) return;
+
+            if (video.paused) {
+                try {
+                    await video.play();
+                } catch (err) {
+                    console.warn("No se pudo reanudar el video:", err);
+                }
+            }
 
             isLivePreview = false;
             isCapturing = true;
