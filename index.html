@@ -422,9 +422,17 @@
         btnDownload.addEventListener('click', () => {
             if (isCapturing || btnDownload.disabled) return;
 
+            const blendName = blendModes[currentBlendIndex].name;
+            const frames = frameSlider.value;
+            const opacity = opacitySlider.value;
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const fechaStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+            const fileName = `${blendName}_${frames}f_${opacity}o_${fechaStr}.jpg`;
             const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
             const link = document.createElement('a');
-            link.download = `LightTrail_${Date.now()}.jpg`;
+
+            link.download = fileName;
             link.href = dataUrl;
             link.click();
         });
