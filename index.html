@@ -228,8 +228,6 @@
                 currentStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = currentStream;
 
-                await video.play();
-
                 await new Promise((resolve) => {
                     video.onloadedmetadata = () => resolve();
                 });
@@ -237,6 +235,7 @@
                 canvas.width = video.videoWidth || targetResolution.width;
                 canvas.height = video.videoHeight || targetResolution.height;
 
+                await video.play();
                 startLiveStream();
 
             } catch (err) {
