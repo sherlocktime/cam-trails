@@ -53,8 +53,8 @@
         </div>
 
         <div class="flex items-center space-x-2">
-            <button id="btnBlendMode" class="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono text-white-400 font-semibold shadow-lg active:scale-95 transition">
-                <span id="blendModeLabel">1 LUCES</span>
+            <button id="btnBlendMode" class="w-36 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center">
+                <span id="blendModeLabel" class="text-center inline-block">1 RASTROS</span>
             </button>
             <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
                 <i class="fa-solid fa-expand text-xs"></i>
@@ -82,17 +82,17 @@
                 <div class="flex flex-col space-y-0.5">
                     <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
                         <span>Frames a acumular</span>
-                        <span id="frameCountValue" class="text-amber-400 font-bold font-mono">15 frames</span>
+                        <span id="frameCountValue" class="text-amber-400 font-bold font-mono">20 frames</span>
                     </div>
-                    <input type="range" id="frameSlider" min="5" max="100" value="15" class="w-full">
+                    <input type="range" id="frameSlider" min="5" max="100" value="20" class="w-full">
                 </div>
 
                 <div class="flex flex-col space-y-0.5">
                     <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
                         <span>Opacidad por frame</span>
-                        <span id="opacityValue" class="text-amber-400 font-bold font-mono">50%</span>
+                        <span id="opacityValue" class="text-amber-400 font-bold font-mono">25%</span>
                     </div>
-                    <input type="range" id="opacitySlider" min="5" max="100" value="50" class="w-full">
+                    <input type="range" id="opacitySlider" min="5" max="100" value="25" class="w-full">
                 </div>
 
                 <div class="flex items-center justify-between pt-1 border-t border-white/10">
@@ -158,11 +158,11 @@
         let targetResolution = { width: 1280, height: 720 };
 
         let blendModes = [
-            { name: '1 LUCES', mode: 'lighten', class: 'text-white-300 font-bold' },
-            { name: '2 BRILLO', mode: 'screen', class: 'text-cyan-300 font-bold' },
-            { name: '3 RASTROS', mode: 'source-over', class: 'text-emerald-400 font-bold' },
-            { name: '4 COLOR', mode: 'soft-light', class: 'text-amber-400 font-bold' },
-            { name: '5 SOMBRAS', mode: 'darken', class: 'text-rose-400 font-bold' }
+            { name: '1 RASTROS', mode: 'source-over', class: 'text-emerald-400 font-bold' },
+            { name: '2 COLOR', mode: 'soft-light', class: 'text-amber-400 font-bold' },
+            { name: '3 SOMBRAS', mode: 'darken', class: 'text-rose-400 font-bold' },
+            { name: '4 LUCES', mode: 'lighten', class: 'text-white-300 font-bold' },
+            { name: '5 BRILLO', mode: 'screen', class: 'text-cyan-300 font-bold' },
         ];
         let currentBlendIndex = 0;
 
