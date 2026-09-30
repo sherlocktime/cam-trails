@@ -53,8 +53,8 @@
         </div>
 
         <div class="flex items-center space-x-2">
-            <button id="btnBlendMode" class="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono text-indigo-400 font-semibold shadow-lg active:scale-95 transition">
-                <span id="blendModeLabel">LUCES</span>
+            <button id="btnBlendMode" class="bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono text-white-400 font-semibold shadow-lg active:scale-95 transition">
+                <span id="blendModeLabel">1 LUCES</span>
             </button>
             <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
                 <i class="fa-solid fa-expand text-xs"></i>
@@ -157,11 +157,11 @@
         let targetResolution = { width: 1280, height: 720 };
 
         let blendModes = [
-            { name: '1 - LUCES', mode: 'lighten', class: 'text-indigo-300 font-bold' },
-            { name: '2 - BRILLO', mode: 'screen', class: 'text-cyan-300 font-bold' },
-            { name: '3 - RASTROS', mode: 'source-over', class: 'text-emerald-400 font-bold' },
-            { name: '4 - COLOR', mode: 'soft-light', class: 'text-amber-400 font-bold' },
-            { name: '5 - SOMBRAS', mode: 'darken', class: 'text-rose-400 font-bold' }
+            { name: '1 LUCES', mode: 'lighten', class: 'text-white-300 font-bold' },
+            { name: '2 BRILLO', mode: 'screen', class: 'text-cyan-300 font-bold' },
+            { name: '3 RASTROS', mode: 'source-over', class: 'text-emerald-400 font-bold' },
+            { name: '4 COLOR', mode: 'soft-light', class: 'text-amber-400 font-bold' },
+            { name: '5 SOMBRAS', mode: 'darken', class: 'text-rose-400 font-bold' }
         ];
         let currentBlendIndex = 0;
 
