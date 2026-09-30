@@ -210,6 +210,7 @@
             icon.className = document.fullscreenElement ? "fa-solid fa-compress text-xs" : "fa-solid fa-expand text-xs";
         });
 
+        // 1. Inicializa y configura el stream de la cámara web
         async function initCamera() {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
@@ -252,6 +253,7 @@
             }
         }
 
+        // 2. Renderiza la previsualización en tiempo real en el canvas
         function startLiveStream() {
             isLivePreview = true;
             isCapturing = false;
@@ -282,7 +284,7 @@
                     video.requestVideoFrameCallback(renderLiveFrame);
                 } else {
                     requestAnimationFrame((t) => renderLiveFrame(t, null));
-                }
+  4           }
             }
 
             if ('requestVideoFrameCallback' in video) {
@@ -297,6 +299,7 @@
             initCamera();
         });
 
+        // 3. Dispara y gestiona el proceso de captura y apilamiento fotográfico
         btnCapture.addEventListener('click', async () => {
             if (isCapturing) return;
 
@@ -340,6 +343,7 @@
             shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all flex items-center justify-center";
             shutterIcon.classList.add('opacity-0');
 
+            // 4. Procesa fotograma a fotograma aplicando los modos de fusión (Blend Modes)
             function processCaptureFrame(now, metadata) {
                 if (!isCapturing) return;
 
@@ -386,6 +390,7 @@
             }
         });
 
+        // 5. Finaliza el apilamiento y habilita los controles de descarga
         function finalizarCaptura() {
             isCapturing = false;
             video.pause();
@@ -430,6 +435,7 @@
             initCamera();
         });
 
+        // 6. Genera y descarga el archivo de imagen final procesado
         btnDownload.addEventListener('click', () => {
             if (isCapturing || btnDownload.disabled) return;
 
@@ -447,7 +453,6 @@
             link.href = dataUrl;
             link.click();
 
-            // Feedback visual de descarga exitosa
             downloadIcon.className = "fa-solid fa-check text-base text-emerald-400";
             btnDownload.classList.add('scale-110');
             setTimeout(() => {
@@ -456,6 +461,7 @@
             }, 1000);
         });
 
+        // 7. Arranca la cámara de forma automática al cargar la página
         window.addEventListener('load', () => {
             initCamera();
         });
