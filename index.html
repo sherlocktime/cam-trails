@@ -117,7 +117,7 @@
             </button>
 
             <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar Foto">
-                <i class="fa-solid fa-download text-base"></i>
+                <i id="downloadIcon" class="fa-solid fa-download text-base"></i>
             </button>
         </div>
     </footer>
@@ -139,6 +139,7 @@
         const shutterIcon = document.getElementById('shutterIcon');
         const btnReset = document.getElementById('btnReset');
         const btnDownload = document.getElementById('btnDownload');
+        const downloadIcon = document.getElementById('downloadIcon');
         const btnSwitchCamera = document.getElementById('btnSwitchCamera');
         const btnFullscreen = document.getElementById('btnFullscreen');
         const btnBlendMode = document.getElementById('btnBlendMode');
@@ -220,7 +221,7 @@
                         facingMode: { ideal: currentFacingMode },
                         width: { ideal: targetResolution.width },
                         height: { ideal: targetResolution.height },
-                        frameRate: { ideal: 30, min: 30 }
+                        frameRate: { ideal: 60, min: 30 }
                     },
                     audio: false
                 };
@@ -234,7 +235,6 @@
 
                 await video.play();
 
-                // OPTIMIZACIÓN: Previsualización fluida escalando el canvas a un máximo de 720p equivalente
                 const maxPreviewWidth = 1280;
                 const videoW = video.videoWidth || targetResolution.width;
                 const videoH = video.videoHeight || targetResolution.height;
@@ -311,7 +311,6 @@
             isLivePreview = false;
             isCapturing = true;
 
-            // OPTIMIZACIÓN: Escalamos el canvas a la resolución real y completa de la cámara justo antes de apilar
             canvas.width = video.videoWidth || targetResolution.width;
             canvas.height = video.videoHeight || targetResolution.height;
 
@@ -406,8 +405,8 @@
             btnFullscreen.style.pointerEvents = 'auto';
 
             btnDownload.disabled = false;
-            btnDownload.classList.remove('opacity-40', 'cursor-not-allowed');
-            btnDownload.classList.add('text-white', 'bg-amber-600', 'hover:bg-amber-500');
+            btnDownload.classList.remove('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
+            btnDownload.classList.add('text-amber-400', 'hover:bg-neutral-800');
         }
 
         btnReset.addEventListener('click', () => {
@@ -424,8 +423,9 @@
             btnFullscreen.style.pointerEvents = 'auto';
 
             btnDownload.disabled = true;
-            btnDownload.classList.add('opacity-40', 'cursor-not-allowed');
-            btnDownload.classList.remove('text-white', 'bg-amber-600', 'hover:bg-amber-500');
+            btnDownload.classList.add('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
+            btnDownload.classList.remove('text-amber-400', 'hover:bg-neutral-800');
+            downloadIcon.className = "fa-solid fa-download text-base";
 
             initCamera();
         });
@@ -433,7 +433,7 @@
         btnDownload.addEventListener('click', () => {
             if (isCapturing || btnDownload.disabled) return;
 
-            const blendName = blendModes[currentBlendIndex].name;
+            const blendName = blendModes[currentBlendIndex].name.replace(/[^a-zA-Z0-9]/g, '_');
             const frames = frameSlider.value;
             const opacity = opacitySlider.value;
             const now = new Date();
@@ -446,6 +446,14 @@
             link.download = fileName;
             link.href = dataUrl;
             link.click();
+
+            // Feedback visual de descarga exitosa
+            downloadIcon.className = "fa-solid fa-check text-base text-emerald-400";
+            btnDownload.classList.add('scale-110');
+            setTimeout(() => {
+                downloadIcon.className = "fa-solid fa-download text-base text-amber-400";
+                btnDownload.classList.remove('scale-110');
+            }, 1000);
         });
 
         window.addEventListener('load', () => {
