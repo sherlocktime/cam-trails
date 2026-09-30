@@ -232,10 +232,17 @@
                     video.onloadedmetadata = () => resolve();
                 });
 
-                canvas.width = video.videoWidth || targetResolution.width;
-                canvas.height = video.videoHeight || targetResolution.height;
-
                 await video.play();
+
+                // OPTIMIZACIÓN: Previsualización fluida escalando el canvas a un máximo de 720p equivalente
+                const maxPreviewWidth = 1280;
+                const videoW = video.videoWidth || targetResolution.width;
+                const videoH = video.videoHeight || targetResolution.height;
+                const scale = videoW > maxPreviewWidth ? maxPreviewWidth / videoW : 1;
+
+                canvas.width = Math.round(videoW * scale);
+                canvas.height = Math.round(videoH * scale);
+
                 startLiveStream();
 
             } catch (err) {
@@ -303,6 +310,10 @@
 
             isLivePreview = false;
             isCapturing = true;
+
+            // OPTIMIZACIÓN: Escalamos el canvas a la resolución real y completa de la cámara justo antes de apilar
+            canvas.width = video.videoWidth || targetResolution.width;
+            canvas.height = video.videoHeight || targetResolution.height;
 
             configPanel.style.opacity = '0.3';
             configPanel.style.pointerEvents = 'none';
@@ -435,13 +446,6 @@
             link.download = fileName;
             link.href = dataUrl;
             link.click();
-        });
-
-        window.addEventListener('resize', () => {
-            if (video.videoWidth && video.videoHeight && isLivePreview) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-            }
         });
 
         window.addEventListener('load', () => {
