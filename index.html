@@ -117,7 +117,7 @@
             </button>
 
             <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar Foto">
-                <i id="downloadIcon" class="fa-solid fa-download text-base"></i>
+                <i id="downloadIcon" class="fa-solid fa-arrow-down text-base"></i>
             </button>
         </div>
     </footer>
@@ -430,7 +430,7 @@
             btnDownload.disabled = true;
             btnDownload.classList.add('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
             btnDownload.classList.remove('text-amber-400', 'hover:bg-neutral-800');
-            downloadIcon.className = "fa-solid fa-download text-base";
+            downloadIcon.className = "fa-solid fa-arrow-down text-base";
 
             initCamera();
         });
@@ -456,7 +456,7 @@
             downloadIcon.className = "fa-solid fa-check text-base text-emerald-400";
             btnDownload.classList.add('scale-110');
             setTimeout(() => {
-                downloadIcon.className = "fa-solid fa-download text-base text-amber-400";
+                downloadIcon.className = "fa-solid fa-arrow-down text-base text-amber-400";
                 btnDownload.classList.remove('scale-110');
             }, 1000);
         });
