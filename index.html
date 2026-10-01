@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Re-Trazado WebGL</title>
+
+    <!-- Vinculación del Web App Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#eeeeee">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -33,6 +38,11 @@
             cursor: pointer;
             box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
         }
+        .btn-mode-fixed {
+            width: 155px;
+            min-width: 155px;
+            max-width: 155px;
+        }
     </style>
 </head>
 <body class="h-[100dvh] w-screen flex flex-col overflow-hidden relative m-0 p-0">
@@ -49,8 +59,9 @@
         </div>
 
         <div class="flex items-center space-x-2">
-            <button id="btnShaderMode" class="w-38 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center">
-                <span id="shaderLabel" class="text-amber-400 font-bold">1 ESTELAS LUZ</span>
+            <!-- Botón de modos con ancho fijo aplicado -->
+            <button id="btnShaderMode" class="btn-mode-fixed bg-black/50 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center overflow-hidden whitespace-nowrap">
+                <span id="shaderLabel" class="text-amber-400 font-bold truncate">1 ESTELAS LUZ</span>
             </button>
             <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
                 <i class="fa-solid fa-expand text-xs"></i>
@@ -147,7 +158,6 @@
 
         // --- SHADERS WEBGL ---
 
-        // Vertex Shader: Conservado de tu versión funcional (previene espejo)
         const vsSource = `
             attribute vec2 a_position;
             varying vec2 v_texCoord;
@@ -161,7 +171,6 @@
             }
         `;
 
-        // Shader Passthrough (VIVO)
         const fsPassthrough = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -171,7 +180,7 @@
             }
         `;
 
-        // Shader 1: Estelas de Luz (Light Trails / Max Luminance)
+        // Shader 1: Estelas de Luz
         const fsLight = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -187,7 +196,52 @@
             }
         `;
 
-        // Shader 2: Movimiento (Motion Trails / Difference)
+        // Shader 2: Sombras
+        const fsShadow = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
+                float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
+                gl_FragColor = (lumaC < lumaA) ? current : accum;
+            }
+        `;
+
+        // Shader 3: Promedio
+        const fsAverage = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                gl_FragColor = mix(accum, current, 0.12);
+            }
+        `;
+
+        // Shader 4: Fantasma
+        const fsGhost = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                vec3 screenColor = 1.0 - (1.0 - accum.rgb) * (1.0 - current.rgb);
+                gl_FragColor = vec4(mix(accum.rgb, screenColor, 0.15), 1.0);
+            }
+        `;
+
+        // Shader 5: Movimiento (Diferencia)
         const fsMotion = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -207,57 +261,12 @@
             }
         `;
 
-        // Shader 3: Sombras (Shadow Trails / Min Luminance)
-        const fsShadow = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-                float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
-                float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
-                gl_FragColor = (lumaC < lumaA) ? current : accum;
-            }
-        `;
-
-        // Shader 4: Promedio (Average Blend / Exposición Sedosa)
-        const fsAverage = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
-                gl_FragColor = mix(accum, current, 0.12);
-            }
-        `;
-
-        // Shader 5: Fantasma (Screen Blend / Superposición suave)
-        const fsGhost = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
-                vec3 screenColor = 1.0 - (1.0 - accum.rgb) * (1.0 - current.rgb);
-                gl_FragColor = vec4(mix(accum.rgb, screenColor, 0.15), 1.0);
-            }
-        `;
-
         const shaderModes = [
             { name: '1 ESTELAS LUZ', fs: fsLight, class: 'text-amber-400 font-bold' },
-            { name: '2 MOVIMIENTO', fs: fsMotion, class: 'text-emerald-400 font-bold' },
-            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
-            { name: '4 PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
-            { name: '5 FANTASMA', fs: fsGhost, class: 'text-purple-400 font-bold' }
+            { name: '2 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
+            { name: '3 PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
+            { name: '4 FANTASMA', fs: fsGhost, class: 'text-purple-400 font-bold' },
+            { name: '5 MOVIMIENTO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
@@ -292,7 +301,6 @@
             passProgram = createProgram(vsSource, fsPassthrough);
             blendProgram = createProgram(vsSource, shaderModes[currentShaderIndex].fs);
 
-            // Textura del video de la cámara
             videoTexture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -300,7 +308,6 @@
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-            // Buffer de vértices (Quad pantalla completa)
             const positionBuffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
@@ -366,7 +373,6 @@
             }
         }
 
-        // 1. MODO EN VIVO (Preview directo de la cámara)
         function startLivePreview() {
             isLivePreview = true;
             isCapturing = false;
@@ -388,7 +394,7 @@
                     gl.enableVertexAttribArray(posLoc);
                     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-                    gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0); // Invertir para WebGL canvas
+                    gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
                     gl.activeTexture(gl.TEXTURE0);
                     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
                     gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
@@ -401,7 +407,6 @@
             requestAnimationFrame(renderLive);
         }
 
-        // 2. MODO CAPTURA Y ACUMULACIÓN POR SHADER
         btnCapture.addEventListener('click', () => {
             if (isCapturing) return;
 
@@ -413,7 +418,6 @@
             targetFrames = parseInt(frameSlider.value);
             decayVal = parseInt(decaySlider.value) / 100;
 
-            // Bloquear interfaz durante captura
             configPanel.style.opacity = '0.3';
             configPanel.style.pointerEvents = 'none';
             btnSwitchCamera.style.opacity = '0.3';
@@ -428,18 +432,17 @@
             shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all flex items-center justify-center";
             shutterIcon.classList.add('opacity-0');
 
-            // Cargar frame base inicial en framebuffer 0
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
             gl.useProgram(passProgram);
-            
+
             const posLoc = gl.getAttribLocation(passProgram, "a_position");
             gl.enableVertexAttribArray(posLoc);
             gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 0.0); // Framebuffer UV estándar
+            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 0.0);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
             gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
@@ -454,14 +457,12 @@
 
             capturedFramesCount++;
 
-            // Actualizar textura del frame actual del video
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
             const readIdx = pingPongCount % 2;
             const writeIdx = (pingPongCount + 1) % 2;
 
-            // 1. Renderizar mezcla en el framebuffer de destino
             gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
             gl.useProgram(blendProgram);
 
@@ -471,12 +472,10 @@
 
             gl.uniform1f(gl.getUniformLocation(blendProgram, "u_flipY"), 0.0);
 
-            // Textura Cámara (Directa)
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
             gl.uniform1i(gl.getUniformLocation(blendProgram, "u_currentFrame"), 0);
 
-            // Textura Acumulada (Frame Anterior)
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
             gl.uniform1i(gl.getUniformLocation(blendProgram, "u_accumulatedFrame"), 1);
@@ -485,7 +484,6 @@
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-            // 2. Dibujar el resultado acumulado directamente en la pantalla
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.useProgram(passProgram);
 
@@ -493,7 +491,7 @@
             gl.enableVertexAttribArray(posLocPass);
             gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
 
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0); // Corregir orientación en canvas principal
+            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, textures[writeIdx]);
             gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
@@ -502,7 +500,6 @@
 
             pingPongCount++;
 
-            // Actualizar barra de progreso UI
             const percent = Math.round((capturedFramesCount / targetFrames) * 100);
             progressBar.style.width = `${percent}%`;
             progressPercent.textContent = `${percent}%`;
