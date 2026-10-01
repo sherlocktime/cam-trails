@@ -242,7 +242,7 @@
             }
         `;
 
-        // Shader: Movimiento (Máscara: Fondo Blanco y Movimiento en Negro)
+        // Shader: Movimiento (Movimiento en Negro sobre Imagen)
         const fsMotion = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -259,7 +259,7 @@
                 float motion = dot(diff, vec3(0.333)); // Luminancia/Luma del cambio
 
                 // Si hay movimiento significativo (> 0.12), pintamos NEGRO
-                if (motion > 0.12) {
+                if (motion > 0.25) {
                     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Negro para los cambios
                 } else {
                     // Fondo original
