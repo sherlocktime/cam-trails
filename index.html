@@ -44,6 +44,10 @@
             min-width: 125px;
             max-width: 125px;
         }
+        /* Espejado horizontal en CSS/JS */
+        .mirror-x {
+            transform: scaleX(-1);
+        }
     </style>
 </head>
 <body class="h-[100dvh] w-screen flex flex-col overflow-hidden relative m-0 p-0">
@@ -165,22 +169,13 @@
         let targetFrames = 25;
         let decayVal = 1.0;
 
-        // --- SHADERS WEBGL ---
+        // --- SHADERS WEBGL (Límpios, sin flips dentro de GPU) ---
 
-        // Inclusión de u_flipX para espejar en modo frontal (selfie)
         const vsSource = `
             attribute vec2 a_position;
             varying vec2 v_texCoord;
-            uniform float u_flipY;
-            uniform float u_flipX;
             void main() {
-                v_texCoord = vec2((a_position.x + 1.0) / 2.0, (a_position.y + 1.0) / 2.0);
-                if (u_flipY > 0.5) {
-                    v_texCoord.y = 1.0 - v_texCoord.y;
-                }
-                if (u_flipX > 0.5) {
-                    v_texCoord.x = 1.0 - v_texCoord.x;
-                }
+                v_texCoord = (a_position + 1.0) * 0.5;
                 gl_Position = vec4(a_position, 0.0, 1.0);
             }
         `;
@@ -256,7 +251,7 @@
                 float motion = dot(diff, vec3(0.333));
 
                 if (motion > 0.15) {
-                    gl_FragColor = vec4(0.0, 0.1, 0.1, 1.0); // cyan
+                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
                 } else {
                     gl_FragColor = current;
                 }
@@ -271,11 +266,10 @@
             uniform float u_decay;
             varying vec2 v_texCoord;
 
-            // Función auxiliar para calcular Color Dodge canal por canal de forma segura
             float colorDodge(float base, float blend) {
                 if (base >= 1.0) return 1.0;
                 float denominator = 1.0 - blend;
-                if (denominator <= 0.001) return 1.0; // Evita división por cero
+                if (denominator <= 0.001) return 1.0;
                 return min(1.0, base / denominator);
             }
 
@@ -283,14 +277,12 @@
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
 
-                // Aplicamos el blend suavemente mezclando una fracción del dodge
                 vec3 dodgeColor = vec3(
                     colorDodge(current.r, accum.r),
                     colorDodge(current.g, accum.g),
                     colorDodge(current.b, accum.b)
                 );
 
-                // Mezclamos un 05% del color Dodge con la acumulación para mantener estabilidad
                 gl_FragColor = vec4(mix(accum.rgb, dodgeColor, 0.05), 1.0);
             }
         `;
@@ -332,6 +324,9 @@
         }
 
         function initGLResources(w, h) {
+            // Invertir automáticamente la orientación vertical nativa de imágenes/HTML en WebGL
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
             passProgram = createProgram(vsSource, fsPassthrough);
             blendProgram = createProgram(vsSource, shaderModes[currentShaderIndex].fs);
 
@@ -387,9 +382,6 @@
             gl.enableVertexAttribArray(posLocPass);
             gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
 
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipX"), 0.0);
-
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, textures[finalIdx]);
             gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
@@ -416,12 +408,22 @@
             }
         }
 
+        function updateCanvasFlip() {
+            // Aplicar/remover clase CSS para espejar la canvas en cámara frontal (selfie)
+            if (currentFacingMode === 'user') {
+                canvas.classList.add('mirror-x');
+            } else {
+                canvas.classList.remove('mirror-x');
+            }
+        }
+
         async function initCamera() {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
             }
 
-            // Elección de resolución según selección
+            updateCanvasFlip();
+
             const reqWidth = currentResMode === '1080p' ? 1920 : 1280;
             const reqHeight = currentResMode === '1080p' ? 1080 : 720;
 
@@ -474,11 +476,6 @@
                     gl.enableVertexAttribArray(posLoc);
                     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-                    // Si es cámara frontal, espejamos horizontalmente (u_flipX = 1.0)
-                    const isFrontCamera = currentFacingMode === 'user';
-                    gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
-                    gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipX"), isFrontCamera ? 1.0 : 0.0);
-
                     gl.activeTexture(gl.TEXTURE0);
                     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
                     gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
@@ -518,8 +515,6 @@
             shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all flex items-center justify-center";
             shutterIcon.classList.add('opacity-0');
 
-            const isFrontCamera = currentFacingMode === 'user';
-
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
@@ -529,9 +524,6 @@
             const posLoc = gl.getAttribLocation(passProgram, "a_position");
             gl.enableVertexAttribArray(posLoc);
             gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 0.0);
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipX"), isFrontCamera ? 1.0 : 0.0);
 
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
@@ -552,7 +544,6 @@
 
             const readIdx = pingPongCount % 2;
             const writeIdx = (pingPongCount + 1) % 2;
-            const isFrontCamera = currentFacingMode === 'user';
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
             gl.useProgram(blendProgram);
@@ -560,9 +551,6 @@
             const posLoc = gl.getAttribLocation(blendProgram, "a_position");
             gl.enableVertexAttribArray(posLoc);
             gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-            gl.uniform1f(gl.getUniformLocation(blendProgram, "u_flipY"), 0.0);
-            gl.uniform1f(gl.getUniformLocation(blendProgram, "u_flipX"), isFrontCamera ? 1.0 : 0.0);
 
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
@@ -583,8 +571,6 @@
             gl.enableVertexAttribArray(posLocPass);
             gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
 
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipX"), 0.0); // Ya viene espejado de la textura acumulada
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, textures[writeIdx]);
             gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
@@ -680,6 +666,24 @@
         btnDownload.addEventListener('click', () => {
             if (btnDownload.disabled) return;
 
+            // Si la cámara es frontal y la canvas está invertida por CSS transform,
+            // necesitamos crear un canvas temporal no invertido para guardar/descargar la imagen correctamente.
+            let exportCanvas = canvas;
+
+            if (currentFacingMode === 'user') {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const ctx = tempCanvas.getContext('2d');
+
+                // Espejamos el contexto de dibujo 2D al guardar
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(canvas, 0, 0);
+
+                exportCanvas = tempCanvas;
+            }
+
             const shaderName = shaderModes[currentShaderIndex].name.replace(/[^a-zA-Z0-9]/g, '_');
             const frames = frameSlider.value;
             const now = new Date();
@@ -689,7 +693,7 @@
 
             const link = document.createElement('a');
             link.download = fileName;
-            link.href = canvas.toDataURL('image/jpeg', 0.95);
+            link.href = exportCanvas.toDataURL('image/jpeg', 0.95);
             link.click();
 
             downloadIcon.className = "fa-solid fa-check text-base text-emerald-400";
