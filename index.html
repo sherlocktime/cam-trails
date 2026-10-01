@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Re-Trazado WebGL Camera</title>
+    <title>Re-Trazado WebGL</title>
 
-    <!-- Web App Manifest & Theme Color -->
+    <!-- Vinculación del Web App Manifest -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0a0a0a">
+    <meta name="theme-color" content="#eeeeee">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,7 +16,7 @@
 
     <style>
         body {
-            background-color: #050505;
+            background-color: #000;
             color: #ffffff;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             user-select: none;
@@ -25,7 +25,7 @@
         }
         input[type=range] {
             -webkit-appearance: none;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.25);
             height: 4px;
             border-radius: 2px;
         }
@@ -38,7 +38,7 @@
             cursor: pointer;
             box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
         }
-        /* Fixed width for mode button */
+        /* Ancho fijo para el botón de modos */
         .btn-mode-fixed {
             width: 155px;
             min-width: 155px;
@@ -46,50 +46,43 @@
         }
     </style>
 </head>
-<body class="h-[100dvh] w-screen flex flex-col overflow-hidden relative m-0 p-0 bg-neutral-950">
+<body class="h-[100dvh] w-screen flex flex-col overflow-hidden relative m-0 p-0">
 
-    <!-- Main Camera Viewport -->
-    <main class="absolute inset-0 w-full h-full bg-black flex items-center justify-center overflow-hidden z-0">
+    <main class="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden z-0">
         <video id="video" autoplay playsinline muted class="hidden"></video>
         <canvas id="glCanvas" class="w-full h-full object-cover"></canvas>
     </main>
 
-    <!-- Top Header Navigation & Controls -->
     <header class="absolute top-0 left-0 right-0 px-4 pt-3 pb-2 flex justify-between items-center z-20 pointer-events-auto">
-        <div class="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono tracking-wide flex items-center space-x-2 shadow-lg">
+        <div class="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono tracking-wide flex items-center space-x-2 shadow-lg">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
             <span id="statusText" class="font-semibold text-neutral-200">VIVO</span>
         </div>
 
         <div class="flex items-center space-x-2">
-            <!-- Shader Mode Switch Button -->
-            <button id="btnShaderMode" class="btn-mode-fixed bg-black/60 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center overflow-hidden whitespace-nowrap">
+            <!-- Botón de modos con ancho fijo -->
+            <button id="btnShaderMode" class="btn-mode-fixed bg-black/50 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center overflow-hidden whitespace-nowrap">
                 <span id="shaderLabel" class="text-cyan-400 font-bold truncate">1 PROMEDIO</span>
             </button>
 
-            <!-- Resolution Selector Button -->
-            <button id="btnRes" class="px-2.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs font-mono font-bold text-amber-400 active:scale-95 transition shadow-lg" title="Cambiar Resolución">
+            <!-- Botón para alternar Resolución 720p / 1080p -->
+            <button id="btnRes" class="px-2.5 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-xs font-mono font-bold text-amber-400 active:scale-95 transition shadow-lg" title="Cambiar Resolución">
                 720p
             </button>
 
-            <!-- Fullscreen Button -->
-            <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
+            <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
                 <i class="fa-solid fa-expand text-xs"></i>
             </button>
-
-            <!-- Camera Switcher -->
-            <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Cambiar Cámara">
+            <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Cambiar Cámara">
                 <i class="fa-solid fa-camera-rotate text-xs"></i>
             </button>
         </div>
     </header>
 
-    <!-- Bottom Footer / Control Dock -->
     <footer class="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 landscape:pb-3 landscape:px-6 backdrop-blur-[1px] z-20 flex flex-col landscape:flex-row landscape:justify-between landscape:items-end space-y-3 landscape:space-y-0">
 
-        <!-- Sliders & Progress Container -->
         <div class="flex flex-col space-y-2 w-full landscape:w-72">
-            <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/70 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
+            <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
                 <div class="flex justify-between text-[11px] font-mono text-amber-400">
                     <span id="progressLabel">Procesando frames (GPU)...</span>
                     <span id="progressPercent">0%</span>
@@ -99,9 +92,7 @@
                 </div>
             </div>
 
-            <!-- Configuration Sliders -->
-            <div id="configPanel" class="flex flex-col space-y-2 bg-black/60 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 shadow-xl">
-                <!-- Frame Count Slider -->
+            <div id="configPanel" class="flex flex-col space-y-2 bg-black/50 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 shadow-xl">
                 <div class="flex flex-col space-y-0.5">
                     <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
                         <span>Frames a acumular</span>
@@ -110,32 +101,27 @@
                     <input type="range" id="frameSlider" min="5" max="150" value="25" class="w-full">
                 </div>
 
-                <!-- Opacity / Blend Slider -->
                 <div class="flex flex-col space-y-0.5">
                     <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                        <span id="opacitySliderLabel">Mezcla / Opacidad</span>
-                        <span id="opacityValue" class="text-amber-400 font-bold font-mono">15%</span>
+                        <span>Desvanecimiento (Decay)</span>
+                        <span id="decayValue" class="text-amber-400 font-bold font-mono">100%</span>
                     </div>
-                    <input type="range" id="opacitySlider" min="1" max="100" value="15" class="w-full">
+                    <input type="range" id="decaySlider" min="80" max="100" value="100" class="w-full">
                 </div>
             </div>
         </div>
 
-        <!-- Action Control Buttons -->
         <div class="flex items-center justify-between landscape:justify-end landscape:space-x-4 px-2 landscape:px-0">
-            <!-- Reset Button -->
             <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-red-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg" title="Volver a Stream en vivo">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
 
-            <!-- Shutter Capture Button -->
             <button id="btnCapture" class="relative w-20 h-20 landscape:w-20 landscape:h-20 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition flex-shrink-0">
                 <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full transition-all duration-200 flex items-center justify-center shadow-inner">
                     <i id="shutterIcon" class="fa-solid fa-bolt text-white text-xl leading-none transition-opacity duration-200"></i>
                 </div>
             </button>
 
-            <!-- Download Button -->
             <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar Foto">
                 <i id="downloadIcon" class="fa-solid fa-arrow-down text-base"></i>
             </button>
@@ -147,11 +133,10 @@
         const canvas = document.getElementById('glCanvas');
         const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
 
-        // Control DOM elements
         const frameSlider = document.getElementById('frameSlider');
         const frameCountValue = document.getElementById('frameCountValue');
-        const opacitySlider = document.getElementById('opacitySlider');
-        const opacityValue = document.getElementById('opacityValue');
+        const decaySlider = document.getElementById('decaySlider');
+        const decayValue = document.getElementById('decayValue');
 
         const btnCapture = document.getElementById('btnCapture');
         const shutterInner = document.getElementById('shutterInner');
@@ -171,19 +156,18 @@
         const progressPercent = document.getElementById('progressPercent');
         const configPanel = document.getElementById('configPanel');
 
-        // State variables
         let currentFacingMode = 'environment';
-        let currentResMode = '720p';
+        let currentResMode = '720p'; // '720p' o '1080p'
         let currentStream = null;
         let isCapturing = false;
         let isLivePreview = true;
         let capturedFramesCount = 0;
         let targetFrames = 25;
-        let blendOpacity = 0.15;
+        let decayVal = 1.0;
 
-        // --- WEBGL SHADERS ---
+        // --- SHADERS WEBGL ---
 
-        // Vertex Shader with Flip Controls for Front Camera mirroring and orientation
+        // Inclusión de u_flipX para espejar en modo frontal (selfie)
         const vsSource = `
             attribute vec2 a_position;
             varying vec2 v_texCoord;
@@ -201,7 +185,6 @@
             }
         `;
 
-        // Passthrough Shader
         const fsPassthrough = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -211,90 +194,73 @@
             }
         `;
 
-        // 1. Shader: Average (Promedio)
+        // Shader: Promedio
         const fsAverage = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_opacity;
+            uniform float u_decay;
             varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-                gl_FragColor = mix(accum, current, u_opacity);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                gl_FragColor = mix(accum, current, 0.12);
             }
         `;
 
-        // 2. Shader: Light Trails (Estelas de Luz)
+        // Shader: Estelas de Luz
         const fsLight = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_opacity;
+            uniform float u_decay;
             varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
                 float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
                 float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
-                vec4 maxColor = (lumaC > lumaA) ? current : accum;
-                gl_FragColor = mix(accum, maxColor, min(1.0, u_opacity * 2.5));
+                gl_FragColor = (lumaC > lumaA) ? current : accum;
             }
         `;
 
-        // 3. Shader: Shadows (Sombras / Dark Trails)
+        // Shader: Sombras
         const fsShadow = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_opacity;
+            uniform float u_decay;
             varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
                 float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
                 float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
-                vec4 minColor = (lumaC < lumaA) ? current : accum;
-                gl_FragColor = mix(accum, minColor, min(1.0, u_opacity * 2.5));
+                gl_FragColor = (lumaC < lumaA) ? current : accum;
             }
         `;
 
-        // 4. Shader: Smooth Color Dodge (Canvas-style globalAlpha opacity blending)
-        const fsColorDodge = `
+        // Shader: Fantasma
+        const fsGhost = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_opacity;
+            uniform float u_decay;
             varying vec2 v_texCoord;
-
-            float dodgeChannel(float base, float blend) {
-                if (base >= 1.0) return 1.0;
-                float denom = 1.0 - blend;
-                if (denom <= 0.001) return 1.0;
-                return min(1.0, base / denom);
-            }
-
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-
-                vec3 dodged = vec3(
-                    dodgeChannel(accum.r, current.r),
-                    dodgeChannel(accum.g, current.g),
-                    dodgeChannel(accum.b, current.b)
-                );
-
-                // Blend dodge result with accumulated image based on smooth opacity setting
-                gl_FragColor = vec4(mix(accum.rgb, dodged, u_opacity), 1.0);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                vec3 screenColor = 1.0 - (1.0 - accum.rgb) * (1.0 - current.rgb);
+                gl_FragColor = vec4(mix(accum.rgb, screenColor, 0.15), 1.0);
             }
         `;
 
-        // 5. Shader: Motion / Difference Contour
+        // Shader: Movimiento
         const fsMotion = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_opacity;
+            uniform float u_decay;
             varying vec2 v_texCoord;
 
             void main() {
@@ -304,18 +270,53 @@
                 vec3 diff = abs(current.rgb - accum.rgb);
                 float motion = dot(diff, vec3(0.333));
 
-                vec4 result = (motion > 0.12) ? vec4(diff * 2.0, 1.0) : accum;
-                gl_FragColor = mix(accum, result, u_opacity * 2.0);
+                if (motion > 0.15) {
+                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                } else {
+                    gl_FragColor = current;
+                }
             }
         `;
 
-        // Shader preset configurations
+        // Shader: Color Dodge (Sobreexposición Neón / Retro-Wave)
+        const fsColorDodge = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+
+            // Función auxiliar para calcular Color Dodge canal por canal de forma segura
+            float colorDodge(float base, float blend) {
+                if (base >= 1.0) return 1.0;
+                float denominator = 1.0 - blend;
+                if (denominator <= 0.001) return 1.0; // Evita división por cero
+                return min(1.0, base / denominator);
+            }
+
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+
+                // Aplicamos el blend suavemente mezclando una fracción del dodge
+                vec3 dodgeColor = vec3(
+                    colorDodge(current.r, accum.r),
+                    colorDodge(current.g, accum.g),
+                    colorDodge(current.b, accum.b)
+                );
+
+                // Mezclamos un 05% del color Dodge con la acumulación para mantener estabilidad
+                gl_FragColor = vec4(mix(accum.rgb, dodgeColor, 0.05), 1.0);
+            }
+        `;
+
         const shaderModes = [
-            { name: '1 PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
-            { name: '2 ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
-            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
-            { name: '4 DODGE NEÓN', fs: fsColorDodge, class: 'text-fuchsia-400 font-bold' },
-            { name: '5 CONTORNO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
+            { name: '1.PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
+            { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
+            { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
+            { name: '4.TRAMA', fs: fsGhost, class: 'text-purple-400 font-bold' },
+            { name: '5.COLOR', fs: fsColorDodge, class: 'text-purple-400 font-bold' },
+            { name: '6.CONTORNO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
@@ -436,6 +437,7 @@
                 currentStream.getTracks().forEach(track => track.stop());
             }
 
+            // Elección de resolución según selección
             const reqWidth = currentResMode === '1080p' ? 1920 : 1280;
             const reqHeight = currentResMode === '1080p' ? 1080 : 720;
 
@@ -459,7 +461,7 @@
                 startLivePreview();
 
             } catch (err) {
-                console.error("Error al acceder a la cámara:", err);
+                console.error("Error cámara:", err);
                 statusText.textContent = "ERROR CÁMARA";
                 statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
             }
@@ -488,6 +490,7 @@
                     gl.enableVertexAttribArray(posLoc);
                     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
+                    // Si es cámara frontal, espejamos horizontalmente (u_flipX = 1.0)
                     const isFrontCamera = currentFacingMode === 'user';
                     gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
                     gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipX"), isFrontCamera ? 1.0 : 0.0);
@@ -513,7 +516,7 @@
             pingPongCount = 0;
 
             targetFrames = parseInt(frameSlider.value);
-            blendOpacity = parseInt(opacitySlider.value) / 100;
+            decayVal = parseInt(decaySlider.value) / 100;
 
             configPanel.style.opacity = '0.3';
             configPanel.style.pointerEvents = 'none';
@@ -585,7 +588,7 @@
             gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
             gl.uniform1i(gl.getUniformLocation(blendProgram, "u_accumulatedFrame"), 1);
 
-            gl.uniform1f(gl.getUniformLocation(blendProgram, "u_opacity"), blendOpacity);
+            gl.uniform1f(gl.getUniformLocation(blendProgram, "u_decay"), decayVal);
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
@@ -597,7 +600,7 @@
             gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
 
             gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipX"), 0.0);
+            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipX"), 0.0); // Ya viene espejado de la textura acumulada
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, textures[writeIdx]);
             gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
@@ -640,12 +643,14 @@
             btnDownload.classList.add('text-amber-400', 'hover:bg-neutral-800');
         }
 
+        // --- EVENTOS DE INTERFAZ ---
+
         frameSlider.addEventListener('input', (e) => {
             frameCountValue.textContent = `${e.target.value} frames`;
         });
 
-        opacitySlider.addEventListener('input', (e) => {
-            opacityValue.textContent = `${e.target.value}%`;
+        decaySlider.addEventListener('input', (e) => {
+            decayValue.textContent = `${e.target.value}%`;
         });
 
         btnShaderMode.addEventListener('click', () => {
