@@ -64,7 +64,7 @@
             <button id="btnShaderMode" class="btn-mode-fixed bg-black/50 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center overflow-hidden whitespace-nowrap">
                 <span id="shaderLabel" class="text-cyan-400 font-bold truncate">1 PROMEDIO</span>
             </button>
-            
+
             <!-- Botón para alternar Resolución 720p / 1080p -->
             <button id="btnRes" class="px-2.5 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-xs font-mono font-bold text-amber-400 active:scale-95 transition shadow-lg" title="Cambiar Resolución">
                 720p
@@ -278,12 +278,45 @@
             }
         `;
 
+        // Shader: Color Dodge (Sobreexposición Neón / Retro-Wave)
+        const fsColorDodge = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+
+            // Función auxiliar para calcular Color Dodge canal por canal de forma segura
+            float colorDodge(float base, float blend) {
+                if (base >= 1.0) return 1.0;
+                float denominator = 1.0 - blend;
+                if (denominator <= 0.001) return 1.0; // Evita división por cero
+                return min(1.0, base / denominator);
+            }
+
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+
+                // Aplicamos el blend suavemente mezclando una fracción del dodge
+                vec3 dodgeColor = vec3(
+                    colorDodge(current.r, accum.r),
+                    colorDodge(current.g, accum.g),
+                    colorDodge(current.b, accum.b)
+                );
+
+                // Mezclamos un 15% del color Dodge con la acumulación para mantener estabilidad
+                gl_FragColor = vec4(mix(accum.rgb, dodgeColor, 0.15), 1.0);
+            }
+        `;
+
         const shaderModes = [
-            { name: '1 PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
-            { name: '2 ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
-            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
-            { name: '4 FANTASMA', fs: fsGhost, class: 'text-purple-400 font-bold' },
-            { name: '5 CONTORNO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
+            { name: '1.PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
+            { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
+            { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
+            { name: '4.TRAMA', fs: fsGhost, class: 'text-purple-400 font-bold' },
+            { name: '5.COLOR', fs: fsColorDodge, class: 'text-purple-400 font-bold' },
+            { name: '6.CONTORNO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
