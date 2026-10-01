@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Re-Trazado GPU</title>
+    <title>Re-Trazado GPU Multi-Shader</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -29,7 +29,8 @@
         </div>
 
         <div class="flex items-center space-x-2">
-            <button id="btnShaderMode" class="w-36 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition">
+            <button id="btnShaderMode" class="bg-black/60 backdrop-blur-md border border-white/10 px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-layer-group text-amber-400 text-[10px]"></i>
                 <span id="shaderLabel" class="text-amber-400 font-bold">1 ESTELAS LUZ</span>
             </button>
             <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg">
@@ -61,7 +62,7 @@
 
             <div class="flex flex-col space-y-0.5 pt-1">
                 <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                    <span>Desvanecimiento / Opacidad</span>
+                    <span>Desvanecimiento / Mezcla</span>
                     <span id="decayVal" class="text-amber-400 font-bold font-mono">0.95</span>
                 </div>
                 <input type="range" id="decaySlider" min="70" max="99" value="95" class="w-full">
@@ -69,7 +70,7 @@
         </div>
 
         <div class="flex items-center justify-between landscape:justify-end landscape:space-x-4 px-2">
-            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-red-500 active:scale-95 transition shadow-lg" title="Cancelar / Volver a en vivo">
+            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-red-500 active:scale-95 transition shadow-lg" title="Reset / Volver a VIVO">
                 <i class="fa-solid fa-rotate-right text-lg"></i>
             </button>
             <button id="btnCapture" class="relative w-20 h-20 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition">
@@ -77,7 +78,7 @@
                     <i id="shutterIcon" class="fa-solid fa-camera text-white text-xl"></i>
                 </div>
             </button>
-            <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar Foto">
+            <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar foto">
                 <i id="downloadIcon" class="fa-solid fa-arrow-down text-base"></i>
             </button>
         </div>
@@ -128,7 +129,7 @@
             }
         `;
 
-        // Shader 1: Light Trails (Brillos máximos)
+        // 1. ESTELAS LUZ
         const fsLight = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -144,22 +145,7 @@
             }
         `;
 
-        // Shader 2: GHOSTING / FANTASMA (Mezcla alfa / opacidad acumulativa)
-        const fsGhost = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-                // Aplica desvanecimiento a los fotogramas anteriores y mezcla el fotograma actual
-                gl_FragColor = mix(accum * u_decay, current, 1.0 - u_decay);
-            }
-        `;
-
-        // Shader 3: Shadow Accumulation (Mínimos / Sombras)
+        // 2. SOMBRAS
         const fsShadow = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -175,10 +161,60 @@
             }
         `;
 
+        // 3. FANTASMA / TRANSPARENCIA
+        const fsGhost = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                gl_FragColor = mix(accum * u_decay, current, 1.0 - u_decay);
+            }
+        `;
+
+        // 4. DIFERENCIA MOVIMIENTO
+        const fsMotion = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                vec3 diff = abs(current.rgb - accum.rgb);
+                float dist = length(diff);
+                if (dist > 0.15) {
+                    gl_FragColor = vec4(diff * 2.0 + current.rgb * 0.3, 1.0);
+                } else {
+                    gl_FragColor = mix(accum * u_decay, current, 0.05);
+                }
+            }
+        `;
+
+        // 5. PROMEDIO SUAVE (Larga Exposición)
+        const fsAverage = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_frameWeight;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                gl_FragColor = mix(accum, current, u_frameWeight);
+            }
+        `;
+
         const shaders = [
             { name: '1 ESTELAS LUZ', fs: fsLight, class: 'text-amber-400 font-bold' },
-            { name: '2 EFECTO FANTASMA', fs: fsGhost, class: 'text-emerald-400 font-bold' },
-            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' }
+            { name: '2 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
+            { name: '3 FANTASMA', fs: fsGhost, class: 'text-emerald-400 font-bold' },
+            { name: '4 DIFERENCIA MOV', fs: fsMotion, class: 'text-cyan-400 font-bold' },
+            { name: '5 PROMEDIO SUAVE', fs: fsAverage, class: 'text-indigo-400 font-bold' }
         ];
 
         let progPassthrough = null;
@@ -290,6 +326,7 @@
                 const posLoc = 0;
 
                 if (!isCapturing && !isComplete) {
+                    // PREVIEW VIVO
                     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                     gl.useProgram(progPassthrough);
                     gl.uniform1f(gl.getUniformLocation(progPassthrough, "u_flipY"), -1.0);
@@ -299,16 +336,16 @@
                     gl.uniform1i(gl.getUniformLocation(progPassthrough, "u_currentFrame"), 0);
 
                     gl.enableVertexAttribArray(posLoc);
+                    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
                 } else if (isCapturing) {
+                    // PROCESAMIENTO MODO CAPTURA
                     capturedFrames++;
                     const readIdx = count % 2;
                     const writeIdx = (count + 1) % 2;
 
-                    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
-                    gl.useProgram(progProcess);
-
+                    // Frame 1: Capturar imagen base congelada
                     if (capturedFrames === 1) {
                         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[readIdx]);
                         gl.useProgram(progPassthrough);
@@ -316,12 +353,14 @@
                         gl.activeTexture(gl.TEXTURE0);
                         gl.bindTexture(gl.TEXTURE_2D, videoTexture);
                         gl.uniform1i(gl.getUniformLocation(progPassthrough, "u_currentFrame"), 0);
+                        gl.enableVertexAttribArray(posLoc);
+                        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
                         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-                        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
-                        gl.useProgram(progProcess);
                     }
 
+                    // Pasar al shader seleccionado
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
+                    gl.useProgram(progProcess);
                     gl.uniform1f(gl.getUniformLocation(progProcess, "u_flipY"), -1.0);
 
                     gl.activeTexture(gl.TEXTURE0);
@@ -332,16 +371,26 @@
                     gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
                     gl.uniform1i(gl.getUniformLocation(progProcess, "u_accumulatedFrame"), 1);
 
-                    gl.uniform1f(gl.getUniformLocation(progProcess, "u_decay"), decayValue);
+                    if (activeShaderIndex === 4) { // Promedio
+                        const weight = 1.0 / capturedFrames;
+                        gl.uniform1f(gl.getUniformLocation(progProcess, "u_frameWeight"), weight);
+                    } else {
+                        gl.uniform1f(gl.getUniformLocation(progProcess, "u_decay"), decayValue);
+                    }
 
+                    gl.enableVertexAttribArray(posLoc);
+                    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
+                    // Render a Pantalla
                     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                     gl.useProgram(progPassthrough);
                     gl.uniform1f(gl.getUniformLocation(progPassthrough, "u_flipY"), 1.0);
                     gl.activeTexture(gl.TEXTURE0);
                     gl.bindTexture(gl.TEXTURE_2D, textures[writeIdx]);
                     gl.uniform1i(gl.getUniformLocation(progPassthrough, "u_currentFrame"), 0);
+                    gl.enableVertexAttribArray(posLoc);
+                    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
                     const percent = Math.round((capturedFrames / targetFrames) * 100);
@@ -425,7 +474,7 @@
         document.getElementById('btnDownload').addEventListener('click', () => {
             if (!isComplete) return;
             const link = document.createElement('a');
-            link.download = `fantasma_gpu_${Date.now()}.jpg`;
+            link.download = `gpu_frame_${activeShaderIndex + 1}_${Date.now()}.jpg`;
             link.href = canvas.toDataURL('image/jpeg', 0.95);
             link.click();
 
