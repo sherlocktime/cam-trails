@@ -3,39 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Re-Trazado</title>
-    <!-- Tailwind CSS -->
+    <title>Re-Trazado GPU</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#000000" />
-    <link rel="apple-touch-icon" href="icon-192.png" />
-
     <style>
-        body {
-            background-color: #000;
-            color: #ffffff;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-        }
-        input[type=range] {
-            -webkit-appearance: none;
-            background: rgba(255, 255, 255, 0.25);
-            height: 4px;
-            border-radius: 2px;
-        }
+        body { background-color: #000; color: #fff; user-select: none; touch-action: manipulation; }
+        input[type=range] { -webkit-appearance: none; background: rgba(255, 255, 255, 0.2); height: 4px; border-radius: 2px; }
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 18px;
-            width: 18px;
-            border-radius: 50%;
-            background: #f59e0b;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
+            background: #f59e0b; cursor: pointer; box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
         }
     </style>
 </head>
@@ -43,428 +19,268 @@
 
     <main class="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden z-0">
         <video id="video" autoplay playsinline muted class="hidden"></video>
-        <canvas id="canvas" class="w-full h-full object-cover"></canvas>
+        <canvas id="glCanvas" class="w-full h-full object-cover"></canvas>
     </main>
 
-    <header class="absolute top-0 left-0 right-0 px-4 pt-3 pb-2 flex justify-between items-center z-20 pointer-events-auto">
+    <header class="absolute top-0 left-0 right-0 px-4 pt-3 pb-2 flex justify-between items-center z-20">
         <div class="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono tracking-wide flex items-center space-x-2 shadow-lg">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
-            <span id="statusText" class="font-semibold text-neutral-200">VIVO</span>
+            <span id="statusText" class="font-semibold text-neutral-200">VIVO (GPU)</span>
         </div>
 
         <div class="flex items-center space-x-2">
-            <button id="btnBlendMode" class="w-32 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center">
-                <span id="blendModeLabel" class="text-center inline-block">1 RASTROS</span>
+            <button id="btnShaderMode" class="w-36 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition">
+                <span id="shaderLabel" class="text-amber-400 font-bold">1 ESTELAS LUZ</span>
             </button>
-            <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
-                <i class="fa-solid fa-expand text-xs"></i>
-            </button>
-            <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Cambiar Cámara">
+            <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg">
                 <i class="fa-solid fa-camera-rotate text-xs"></i>
             </button>
         </div>
     </header>
 
-    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 landscape:pb-3 landscape:px-6 backdrop-blur-[2px] z-20 flex flex-col landscape:flex-row landscape:justify-between landscape:items-end space-y-3 landscape:space-y-0">
-
-        <div class="flex flex-col space-y-2 w-full landscape:w-72">
-            <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
-                <div class="flex justify-between text-[11px] font-mono text-amber-400">
-                    <span id="progressLabel">Apilando frames...</span>
-                    <span id="progressPercent">0%</span>
+    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 z-20 flex flex-col landscape:flex-row landscape:justify-between landscape:items-end space-y-3 landscape:space-y-0">
+        <div class="flex flex-col space-y-2 w-full landscape:w-72 bg-black/50 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 shadow-xl">
+            <div class="flex flex-col space-y-0.5">
+                <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
+                    <span>Desvanecimiento (Decay)</span>
+                    <span id="decayVal" class="text-amber-400 font-bold font-mono">0.99</span>
                 </div>
-                <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                    <div id="progressBar" class="bg-amber-500 h-full w-0 transition-all duration-75"></div>
-                </div>
-            </div>
-
-            <div id="configPanel" class="flex flex-col space-y-2 bg-black/50 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 shadow-xl">
-                <div class="flex flex-col space-y-0.5">
-                    <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                        <span>Frames a acumular</span>
-                        <span id="frameCountValue" class="text-amber-400 font-bold font-mono">25 frames</span>
-                    </div>
-                    <input type="range" id="frameSlider" min="5" max="100" value="25" class="w-full">
-                </div>
-
-                <div class="flex flex-col space-y-0.5">
-                    <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                        <span>Opacidad por frame</span>
-                        <span id="opacityValue" class="text-amber-400 font-bold font-mono">15%</span>
-                    </div>
-                    <input type="range" id="opacitySlider" min="5" max="100" value="15" class="w-full">
-                </div>
-
-                <div class="flex items-center justify-between pt-1 border-t border-white/10">
-                    <span class="text-[11px] text-neutral-400 font-medium">Resolución:</span>
-                    <div class="flex space-x-1.5">
-                        <button id="btnRes720" class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500 text-black transition">720p</button>
-                        <button id="btnRes1080" class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-neutral-300 transition">1080p</button>
-                    </div>
-                </div>
+                <input type="range" id="decaySlider" min="90" max="100" value="99" class="w-full">
             </div>
         </div>
 
-        <div class="flex items-center justify-between landscape:justify-end landscape:space-x-4 px-2 landscape:px-0">
-            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-red-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg" title="Volver a Stream en vivo">
-                <i class="fa-solid fa-xmark text-xl"></i>
+        <div class="flex items-center justify-between landscape:justify-end landscape:space-x-4 px-2">
+            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-red-500 active:scale-95 transition shadow-lg" title="Limpiar acumulación">
+                <i class="fa-solid fa-rotate-right text-lg"></i>
             </button>
-
-            <button id="btnCapture" class="relative w-20 h-20 landscape:w-20 landscape:h-20 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition flex-shrink-0">
-                <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full transition-all duration-200 flex items-center justify-center shadow-inner">
-                    <i id="shutterIcon" class="fa-solid fa-bolt text-white text-xl leading-none transition-opacity duration-200"></i>
+            <button id="btnCapture" class="relative w-20 h-20 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition">
+                <div class="w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner">
+                    <i class="fa-solid fa-camera text-white text-xl"></i>
                 </div>
-            </button>
-
-            <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar Foto">
-                <i id="downloadIcon" class="fa-solid fa-arrow-down text-base"></i>
             </button>
         </div>
     </footer>
 
     <script>
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-        const frameSlider = document.getElementById('frameSlider');
-        const frameCountValue = document.getElementById('frameCountValue');
-        const opacitySlider = document.getElementById('opacitySlider');
-        const opacityValue = document.getElementById('opacityValue');
-        const btnRes720 = document.getElementById('btnRes720');
-        const btnRes1080 = document.getElementById('btnRes1080');
-
-        const btnCapture = document.getElementById('btnCapture');
-        const shutterInner = document.getElementById('shutterInner');
-        const shutterIcon = document.getElementById('shutterIcon');
-        const btnReset = document.getElementById('btnReset');
-        const btnDownload = document.getElementById('btnDownload');
-        const downloadIcon = document.getElementById('downloadIcon');
-        const btnSwitchCamera = document.getElementById('btnSwitchCamera');
-        const btnFullscreen = document.getElementById('btnFullscreen');
-        const btnBlendMode = document.getElementById('btnBlendMode');
-        const blendModeLabel = document.getElementById('blendModeLabel');
-        const statusText = document.getElementById('statusText');
-        const statusDot = document.getElementById('statusDot');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressPercent = document.getElementById('progressPercent');
-        const configPanel = document.getElementById('configPanel');
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
 
         let currentFacingMode = 'environment';
         let currentStream = null;
-        let isCapturing = false;
-        let isLivePreview = true;
-        let targetResolution = { width: 1280, height: 720 };
+        let shaderProgram = null;
+        let activeShaderIndex = 0;
+        let decayValue = 0.99;
 
-        let blendModes = [
-            { name: '1 RASTROS', mode: 'source-over', class: 'text-emerald-400 font-bold' },
-            { name: '2 COLOR', mode: 'soft-light', class: 'text-amber-400 font-bold' },
-            { name: '3 SOMBRAS', mode: 'darken', class: 'text-rose-400 font-bold' },
-            { name: '4 LUCES', mode: 'lighten', class: 'text-white-300 font-bold' },
-            { name: '5 BRILLO', mode: 'screen', class: 'text-cyan-300 font-bold' },
-        ];
-        let currentBlendIndex = 0;
-
-        frameSlider.addEventListener('input', (e) => {
-            frameCountValue.textContent = `${e.target.value} frames`;
-        });
-
-        opacitySlider.addEventListener('input', (e) => {
-            opacityValue.textContent = `${e.target.value}%`;
-        });
-
-        btnRes720.addEventListener('click', () => {
-            if (isCapturing) return;
-            targetResolution = { width: 1280, height: 720 };
-            btnRes720.className = "px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500 text-black transition";
-            btnRes1080.className = "px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-neutral-300 transition";
-            initCamera();
-        });
-
-        btnRes1080.addEventListener('click', () => {
-            if (isCapturing) return;
-            targetResolution = { width: 1920, height: 1080 };
-            btnRes1080.className = "px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500 text-black transition";
-            btnRes720.className = "px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-neutral-300 transition";
-            initCamera();
-        });
-
-        btnBlendMode.addEventListener('click', () => {
-            currentBlendIndex = (currentBlendIndex + 1) % blendModes.length;
-            const current = blendModes[currentBlendIndex];
-            blendModeLabel.textContent = current.name;
-            blendModeLabel.className = current.class;
-        });
-
-        btnFullscreen.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => console.warn(err));
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
+        // Vertex Shader Standard
+        const vsSource = `
+            attribute vec2 a_position;
+            varying vec2 v_texCoord;
+            void main() {
+                v_texCoord = vec2((a_position.x + 1.0) / 2.0, 1.0 - (a_position.y + 1.0) / 2.0);
+                gl_Position = vec4(a_position, 0.0, 1.0);
             }
-        });
+        `;
 
-        document.addEventListener('fullscreenchange', () => {
-            const icon = btnFullscreen.querySelector('i');
-            icon.className = document.fullscreenElement ? "fa-solid fa-compress text-xs" : "fa-solid fa-expand text-xs";
-        });
-
-        // 1. Inicializa y configura el stream de la cámara web
-        async function initCamera() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
+        // Shader 1: Light Trails
+        const fsLight = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
+                float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
+                gl_FragColor = (lumaC > lumaA) ? current : accum;
             }
+        `;
 
-            try {
-                const constraints = {
-                    video: {
-                        facingMode: { ideal: currentFacingMode },
-                        width: { ideal: targetResolution.width },
-                        height: { ideal: targetResolution.height },
-                        frameRate: { ideal: 60, min: 30 }
-                    },
-                    audio: false
-                };
-
-                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = currentStream;
-
-                await new Promise((resolve) => {
-                    video.onloadedmetadata = () => resolve();
-                });
-
-                await video.play();
-
-                const maxPreviewWidth = 1280;
-                const videoW = video.videoWidth || targetResolution.width;
-                const videoH = video.videoHeight || targetResolution.height;
-                const scale = videoW > maxPreviewWidth ? maxPreviewWidth / videoW : 1;
-
-                canvas.width = Math.round(videoW * scale);
-                canvas.height = Math.round(videoH * scale);
-
-                startLiveStream();
-
-            } catch (err) {
-                console.error("Error al acceder a la cámara:", err);
-                statusText.textContent = "ERROR CÁMARA";
-                statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
-            }
-        }
-
-        // 2. Renderiza la previsualización en tiempo real en el canvas
-        function startLiveStream() {
-            isLivePreview = true;
-            isCapturing = false;
-
-            statusText.textContent = "VIVO";
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.globalAlpha = 1.0;
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            function renderLiveFrame(now, metadata) {
-                if (!isLivePreview) return;
-
-                ctx.globalCompositeOperation = 'source-over';
-                ctx.globalAlpha = 1.0;
-
-                ctx.save();
-                if (currentFacingMode === 'user') {
-                    ctx.translate(canvas.width, 0);
-                    ctx.scale(-1, 1);
-                }
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                ctx.restore();
-
-                if ('requestVideoFrameCallback' in video) {
-                    video.requestVideoFrameCallback(renderLiveFrame);
+        // Shader 2: Motion Trails
+        const fsMotion = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                vec3 diff = abs(current.rgb - accum.rgb);
+                float motion = dot(diff, vec3(0.333));
+                if (motion > 0.15) {
+                    gl_FragColor = vec4(diff * 2.5 + current.rgb * 0.4, 1.0);
                 } else {
-                    requestAnimationFrame((t) => renderLiveFrame(t, null));
-  4           }
+                    gl_FragColor = mix(accum * u_decay, current, 0.05);
+                }
             }
+        `;
 
-            if ('requestVideoFrameCallback' in video) {
-                video.requestVideoFrameCallback(renderLiveFrame);
-            } else {
-                requestAnimationFrame((t) => renderLiveFrame(t, null));
+        // Shader 3: Shadow Trails
+        const fsShadow = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
+                float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
+                gl_FragColor = (lumaC < lumaA) ? current : accum;
             }
+        `;
+
+        const shaders = [
+            { name: '1 ESTELAS LUZ', fs: fsLight, class: 'text-amber-400 font-bold' },
+            { name: '2 MOVIMIENTO', fs: fsMotion, class: 'text-emerald-400 font-bold' },
+            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' }
+        ];
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            return shader;
         }
 
-        btnSwitchCamera.addEventListener('click', () => {
+        function initProgram(fsSource) {
+            const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+            const prog = gl.createProgram();
+            gl.attachShader(prog, vs);
+            gl.attachShader(prog, fs);
+            gl.linkProgram(prog);
+            return prog;
+        }
+
+        // Configuración de Framebuffers Ping-Pong
+        let textures = [], framebuffers = [];
+        let count = 0;
+
+        function initFramebuffers(w, h) {
+            textures = []; framebuffers = [];
+            for (let i = 0; i < 2; i++) {
+                const tex = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, tex);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+                const fb = gl.createFramebuffer();
+                gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+
+                textures.push(tex);
+                framebuffers.push(fb);
+            }
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        }
+
+        let videoTexture = null;
+        function initVideoTexture() {
+            videoTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        }
+
+        async function initCamera() {
+            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+            currentStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+            video.srcObject = currentStream;
+            await video.play();
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+
+            initFramebuffers(canvas.width, canvas.height);
+            initVideoTexture();
+            shaderProgram = initProgram(shaders[activeShaderIndex].fs);
+            
+            // Quad buffer setup
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+            render();
+        }
+
+        function render() {
+            if (!video.paused && video.readyState >= 2) {
+                gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+
+                const readIdx = count % 2;
+                const writeIdx = (count + 1) % 2;
+
+                gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
+                gl.useProgram(shaderProgram);
+
+                const posLoc = gl.getAttribLocation(shaderProgram, "a_position");
+                gl.enableVertexAttribArray(posLoc);
+                gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+                gl.uniform1i(gl.getUniformLocation(shaderProgram, "u_currentFrame"), 0);
+
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
+                gl.uniform1i(gl.getUniformLocation(shaderProgram, "u_accumulatedFrame"), 1);
+
+                gl.uniform1f(gl.getUniformLocation(shaderProgram, "u_decay"), decayValue);
+
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+                // Render en pantalla principal
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+                count++;
+            }
+            requestAnimationFrame(render);
+        }
+
+        // Eventos UI
+        document.getElementById('btnShaderMode').addEventListener('click', () => {
+            activeShaderIndex = (activeShaderIndex + 1) % shaders.length;
+            const s = shaders[activeShaderIndex];
+            document.getElementById('shaderLabel').textContent = s.name;
+            document.getElementById('shaderLabel').className = s.class;
+            shaderProgram = initProgram(s.fs);
+        });
+
+        document.getElementById('decaySlider').addEventListener('input', (e) => {
+            decayValue = parseFloat(e.target.value) / 100;
+            document.getElementById('decayVal').textContent = decayValue.toFixed(2);
+        });
+
+        document.getElementById('btnReset').addEventListener('click', () => {
+            initFramebuffers(canvas.width, canvas.height);
+        });
+
+        document.getElementById('btnSwitchCamera').addEventListener('click', () => {
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
             initCamera();
         });
 
-        // 3. Dispara y gestiona el proceso de captura y apilamiento fotográfico
-        btnCapture.addEventListener('click', async () => {
-            if (isCapturing) return;
-
-            if (video.paused) {
-                try {
-                    await video.play();
-                } catch (err) {
-                    console.warn("No se pudo reanudar el video:", err);
-                }
-            }
-
-            isLivePreview = false;
-            isCapturing = true;
-
-            canvas.width = video.videoWidth || targetResolution.width;
-            canvas.height = video.videoHeight || targetResolution.height;
-
-            configPanel.style.opacity = '0.3';
-            configPanel.style.pointerEvents = 'none';
-            btnSwitchCamera.style.opacity = '0.3';
-            btnSwitchCamera.style.pointerEvents = 'none';
-            btnFullscreen.style.opacity = '0.3';
-            btnFullscreen.style.pointerEvents = 'none';
-            btnDownload.disabled = true;
-            btnDownload.classList.add('opacity-40', 'cursor-not-allowed');
-
-            const targetFrames = parseInt(frameSlider.value);
-            const frameAlpha = parseInt(opacitySlider.value) / 100;
-            const activeBlendMode = blendModes[currentBlendIndex].mode;
-            let capturedCount = 0;
-
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.globalAlpha = 1.0;
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            statusText.textContent = `(0/${targetFrames})`;
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
-            progressContainer.classList.remove('hidden');
-
-            shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all flex items-center justify-center";
-            shutterIcon.classList.add('opacity-0');
-
-            // 4. Procesa fotograma a fotograma aplicando los modos de fusión (Blend Modes)
-            function processCaptureFrame(now, metadata) {
-                if (!isCapturing) return;
-
-                capturedCount++;
-
-                if (capturedCount === 1) {
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.globalAlpha = 1.0;
-                } else {
-                    ctx.globalCompositeOperation = activeBlendMode;
-                    ctx.globalAlpha = frameAlpha;
-                }
-
-                ctx.save();
-                if (currentFacingMode === 'user') {
-                    ctx.translate(canvas.width, 0);
-                    ctx.scale(-1, 1);
-                }
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                ctx.restore();
-
-                const percent = Math.round((capturedCount / targetFrames) * 100);
-                progressBar.style.width = `${percent}%`;
-                progressPercent.textContent = `${percent}%`;
-                statusText.textContent = `(${capturedCount}/${targetFrames})`;
-
-                if (capturedCount >= targetFrames) {
-                    finalizarCaptura();
-                } else {
-                    if ('requestVideoFrameCallback' in video) {
-                        video.requestVideoFrameCallback(processCaptureFrame);
-                    } else {
-                        setTimeout(() => {
-                            if (isCapturing) requestAnimationFrame((t) => processCaptureFrame(t, null));
-                        }, 16);
-                    }
-                }
-            }
-
-            if ('requestVideoFrameCallback' in video) {
-                video.requestVideoFrameCallback(processCaptureFrame);
-            } else {
-                requestAnimationFrame((t) => processCaptureFrame(t, null));
-            }
-        });
-
-        // 5. Finaliza el apilamiento y habilita los controles de descarga
-        function finalizarCaptura() {
-            isCapturing = false;
-            video.pause();
-
-            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
-            shutterIcon.classList.remove('opacity-0');
-            progressContainer.classList.add('hidden');
-
-            statusText.textContent = "LISTO";
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
-
-            configPanel.style.opacity = '1';
-            configPanel.style.pointerEvents = 'auto';
-            btnSwitchCamera.style.opacity = '1';
-            btnSwitchCamera.style.pointerEvents = 'auto';
-            btnFullscreen.style.opacity = '1';
-            btnFullscreen.style.pointerEvents = 'auto';
-
-            btnDownload.disabled = false;
-            btnDownload.classList.remove('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
-            btnDownload.classList.add('text-amber-400', 'hover:bg-neutral-800');
-        }
-
-        btnReset.addEventListener('click', () => {
-            isCapturing = false;
-            progressContainer.classList.add('hidden');
-            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
-            shutterIcon.classList.remove('opacity-0');
-
-            configPanel.style.opacity = '1';
-            configPanel.style.pointerEvents = 'auto';
-            btnSwitchCamera.style.opacity = '1';
-            btnSwitchCamera.style.pointerEvents = 'auto';
-            btnFullscreen.style.opacity = '1';
-            btnFullscreen.style.pointerEvents = 'auto';
-
-            btnDownload.disabled = true;
-            btnDownload.classList.add('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
-            btnDownload.classList.remove('text-amber-400', 'hover:bg-neutral-800');
-            downloadIcon.className = "fa-solid fa-arrow-down text-base";
-
-            initCamera();
-        });
-
-        // 6. Genera y descarga el archivo de imagen final procesado
-        btnDownload.addEventListener('click', () => {
-            if (isCapturing || btnDownload.disabled) return;
-
-            const blendName = blendModes[currentBlendIndex].name.replace(/[^a-zA-Z0-9]/g, '_');
-            const frames = frameSlider.value;
-            const opacity = opacitySlider.value;
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            const fechaStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-            const fileName = `${blendName}_${frames}f_${opacity}o_${fechaStr}.jpg`;
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        document.getElementById('btnCapture').addEventListener('click', () => {
             const link = document.createElement('a');
-
-            link.download = fileName;
-            link.href = dataUrl;
+            link.download = `captura_shader_${Date.now()}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
             link.click();
-
-            downloadIcon.className = "fa-solid fa-check text-base text-emerald-400";
-            btnDownload.classList.add('scale-110');
-            setTimeout(() => {
-                downloadIcon.className = "fa-solid fa-arrow-down text-base text-amber-400";
-                btnDownload.classList.remove('scale-110');
-            }, 1000);
         });
 
-        // 7. Arranca la cámara de forma automática al cargar la página
-        window.addEventListener('load', () => {
-            initCamera();
-        });
+        window.addEventListener('load', initCamera);
     </script>
 </body>
 </html>
