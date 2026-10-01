@@ -262,7 +262,6 @@
             }
         `;
 
-        // Reordenamiento: PROMEDIO figura primero como opción predeterminada
         const shaderModes = [
             { name: '1 PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
             { name: '2 ESTELAS LUZ', fs: fsLight, class: 'text-amber-400 font-bold' },
@@ -344,18 +343,46 @@
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         }
 
-        // Función para actualizar tamaño de canvas y buffer al rotar o cambiar tamaño
+        // Función que redibuja la textura acumulada sobre el canvas
+        function renderCapturedResult() {
+            if (textures.length === 0) return;
+            const finalIdx = (pingPongCount) % 2;
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.useProgram(passProgram);
+
+            const posLocPass = gl.getAttribLocation(passProgram, "a_position");
+            gl.enableVertexAttribArray(posLocPass);
+            gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
+
+            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, textures[finalIdx]);
+            gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
+
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        // Manejo seguro de rotaciones y cambio de tamaño
         function handleResize() {
             if (!video.videoWidth || !video.videoHeight) return;
 
             const w = video.videoWidth;
             const h = video.videoHeight;
 
-            if (canvas.width !== w || canvas.height !== h) {
-                canvas.width = w;
-                canvas.height = h;
-                gl.viewport(0, 0, w, h);
-                initFramebuffers(w, h);
+            // Si está en vivo, podemos reiniciar texturas al tamaño nuevo de la cámara
+            if (isLivePreview) {
+                if (canvas.width !== w || canvas.height !== h) {
+                    canvas.width = w;
+                    canvas.height = h;
+                    gl.viewport(0, 0, w, h);
+                    initFramebuffers(w, h);
+                }
+            } else if (!isCapturing) {
+                // Si la captura YA finalizó y rotamos el teléfono:
+                // Solo ajustamos el Viewport para adaptar la vista, resguardando la foto capturada
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                renderCapturedResult();
             }
         }
 
@@ -401,7 +428,7 @@
                 if (!isLivePreview) return;
 
                 if (video.readyState >= 2) {
-                    handleResize(); // Monitorea rotaciones en tiempo real
+                    handleResize();
 
                     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
