@@ -240,41 +240,45 @@
             }
         `;
 
-        // Shader: Contorno (Acumula Cyan y convierte a Dibujo Tinta Negra sobre Blanco)
+        // Shader: Contorno (Acumulación Cyan -> Mapeo a Blanco y Negro)
         const fsMotion = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
             varying vec2 v_texCoord;
 
-            // Distancia para verificar si un color es aproximadamente Cyan
-            float isCyan(vec3 col) {
-                vec3 cyan = vec3(0.0, 1.0, 1.0);
-                return distance(col, cyan);
-            }
+            // Cyan puro como color de marca de movimiento
+            const vec3 CYAN = vec3(0.0, 1.0, 1.0);
 
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
 
-                // 1. Calculamos el nivel de movimiento
+                // 1. Verificar si este píxel YA era línea de movimiento acumulada
+                // (comprobamos si el color acumulado está cerca del Cyan)
+                bool wasMotion = distance(accum.rgb, CYAN) < 0.3;
+
+                // 2. Calcular si hay NUEVO movimiento en el frame actual
+                // Comparamos el frame actual con la imagen de la cámara (no con el Cyan)
                 vec3 diff = abs(current.rgb - accum.rgb);
                 float motion = dot(diff, vec3(0.333));
+                bool isNewMotion = (motion > 0.15) && !wasMotion;
 
-                // 2. Definimos el color del frame actual (Cyan si hay movimiento)
-                vec3 colorActual;
-                if (motion > 0.15 || isCyan(accum.rgb) < 0.2) {
-                    // Si hay movimiento O si este píxel ya era Cyan en el pasado, mantenemos Cyan
-                    colorActual = vec3(0.0, 1.0, 1.0); 
+                // 3. COLOR INTERNO DE ACUMULACIÓN (Lo que se guarda para el siguiente frame)
+                vec3 nextAccum;
+                if (wasMotion || isNewMotion) {
+                    nextAccum = CYAN; // Mantenemos o pintamos Cyan
                 } else {
-                    colorActual = current.rgb;
+                    nextAccum = current.rgb; // Mantenemos el frame real de la cámara
                 }
 
-                // 3. PASO FINAL: Convertimos Cyan a Negro y todo lo demás a Blanco
-                if (isCyan(colorActual) < 0.2) {
-                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Trazo de tinta (Negro)
+                // 4. SALIDA VISUAL (Lo que ves en pantalla en ESTE frame)
+                // Convertimos: Si es Cyan (movimiento) -> NEGRO, de lo contrario -> BLANCO
+                if (distance(nextAccum, CYAN) < 0.3) {
+                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Trazo
                 } else {
-                    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); // Fondo de papel (Blanco)
+                    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); // Fondo
                 }
             }
         `;
