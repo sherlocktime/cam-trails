@@ -40,9 +40,9 @@
         }
         /* Ancho fijo para el botón de modos */
         .btn-mode-fixed {
-            width: 155px;
-            min-width: 155px;
-            max-width: 155px;
+            width: 125px;
+            min-width: 125px;
+            max-width: 125px;
         }
     </style>
 </head>
@@ -208,7 +208,7 @@
             }
         `;
 
-        // Shader: Estelas de Luz
+        // Shader: Estelas
         const fsLight = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -240,22 +240,7 @@
             }
         `;
 
-        // Shader: Fantasma
-        const fsGhost = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
-                vec3 screenColor = 1.0 - (1.0 - accum.rgb) * (1.0 - current.rgb);
-                gl_FragColor = vec4(mix(accum.rgb, screenColor, 0.15), 1.0);
-            }
-        `;
-
-        // Shader: Movimiento
+        // Shader: Contorno
         const fsMotion = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -314,9 +299,8 @@
             { name: '1.PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
-            { name: '4.TRAMA', fs: fsGhost, class: 'text-purple-400 font-bold' },
-            { name: '5.COLOR', fs: fsColorDodge, class: 'text-purple-400 font-bold' },
-            { name: '6.CONTORNO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
+            { name: '4.COLOR', fs: fsColorDodge, class: 'text-purple-400 font-bold' },
+            { name: '5.CONTORNO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
