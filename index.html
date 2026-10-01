@@ -1,313 +1,403 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Re-Trazado WebGL</title>
-
-    <!-- Vinculación del Web App Manifest -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#eeeeee">
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acumulación de Frames WebGL - Máscara de Movimiento</title>
     <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --accent-color: #00adb5;
+            --text-color: #eeeeee;
+        }
+
         body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            padding: 1rem 0;
+            background-color: var(--panel-bg);
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            width: 90%;
+            max-width: 1280px;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 1280px;
             background-color: #000;
-            color: #ffffff;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
         }
-        input[type=range] {
-            -webkit-appearance: none;
-            background: rgba(255, 255, 255, 0.25);
-            height: 4px;
-            border-radius: 2px;
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
         }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 18px;
-            width: 18px;
-            border-radius: 50%;
-            background: #f59e0b;
+
+        .controls-panel {
+            background-color: var(--panel-bg);
+            padding: 1.2rem;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #aaa;
+        }
+
+        select, button, input[type="file"] {
+            background-color: #2a2a2a;
+            color: var(--text-color);
+            border: 1px solid #444;
+            padding: 0.6rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+            transition: background 0.2s, border-color 0.2s;
         }
-        /* Ancho fijo para el botón de modos */
-        .btn-mode-fixed {
-            width: 155px;
-            min-width: 155px;
-            max-width: 155px;
+
+        select:hover, button:hover {
+            background-color: #3a3a3a;
+            border-color: var(--accent-color);
+        }
+
+        button.active {
+            background-color: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+            border-color: var(--accent-color);
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            accent-color: var(--accent-color);
+        }
+
+        .value-display {
+            font-size: 0.85rem;
+            width: 3rem;
+            text-align: right;
+            font-family: monospace;
+        }
+
+        video {
+            display: none;
         }
     </style>
 </head>
-<body class="h-[100dvh] w-screen flex flex-col overflow-hidden relative m-0 p-0">
+<body>
 
-    <main class="absolute inset-0 w-full h-full bg-neutral-950 flex items-center justify-center overflow-hidden z-0">
-        <video id="video" autoplay playsinline muted class="hidden"></video>
-        <canvas id="glCanvas" class="w-full h-full object-cover"></canvas>
-    </main>
-
-    <header class="absolute top-0 left-0 right-0 px-4 pt-3 pb-2 flex justify-between items-center z-20 pointer-events-auto">
-        <div class="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono tracking-wide flex items-center space-x-2 shadow-lg">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
-            <span id="statusText" class="font-semibold text-neutral-200">VIVO</span>
-        </div>
-
-        <div class="flex items-center space-x-2">
-            <!-- Botón de modos con ancho fijo -->
-            <button id="btnShaderMode" class="btn-mode-fixed bg-black/50 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center overflow-hidden whitespace-nowrap">
-                <span id="shaderLabel" class="text-cyan-400 font-bold truncate">1 PROMEDIO</span>
-            </button>
-            <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
-                <i class="fa-solid fa-expand text-xs"></i>
-            </button>
-            <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Cambiar Cámara">
-                <i class="fa-solid fa-camera-rotate text-xs"></i>
-            </button>
-        </div>
+    <header>
+        <h1>Cámara de Acumulación WebGL</h1>
     </header>
 
-    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 landscape:pb-3 landscape:px-6 backdrop-blur-[2px] z-20 flex flex-col landscape:flex-row landscape:justify-between landscape:items-end space-y-3 landscape:space-y-0">
+    <div class="container">
+        <div class="canvas-wrapper">
+            <canvas id="glCanvas"></canvas>
+        </div>
 
-        <div class="flex flex-col space-y-2 w-full landscape:w-72">
-            <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
-                <div class="flex justify-between text-[11px] font-mono text-amber-400">
-                    <span id="progressLabel">Procesando frames (GPU)...</span>
-                    <span id="progressPercent">0%</span>
-                </div>
-                <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                    <div id="progressBar" class="bg-amber-500 h-full w-0 transition-all duration-75"></div>
+        <div class="controls-panel">
+            <div class="control-group">
+                <label for="sourceSelect">Fuente de Video</label>
+                <select id="sourceSelect">
+                    <option value="webcam">Cámara Web</option>
+                    <option value="file">Subir Archivo de Video</option>
+                </select>
+                <input type="file" id="fileInput" accept="video/*" style="display: none;">
+            </div>
+
+            <div class="control-group">
+                <label for="modeSelect">Modo de Acumulación</label>
+                <select id="modeSelect">
+                    <option value="0">1. Promedio Continuo (Suavizado)</option>
+                    <option value="1">2. Estelas de Luz (Máximo RGB)</option>
+                    <option value="2">3. Sombras Acumuladas (Mínimo RGB)</option>
+                    <option value="3">4. Fantasma / Persistencia (Decay)</option>
+                    <option value="4" selected>5. Movimiento (Máscara sobre Blanco)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Persistencia / Decay</label>
+                <div class="slider-container">
+                    <input type="range" id="decaySlider" min="0.50" max="1.00" step="0.005" value="0.95">
+                    <span id="decayValue" class="value-display">0.95</span>
                 </div>
             </div>
 
-            <div id="configPanel" class="flex flex-col space-y-2 bg-black/50 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 shadow-xl">
-                <div class="flex flex-col space-y-0.5">
-                    <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                        <span>Frames a acumular</span>
-                        <span id="frameCountValue" class="text-amber-400 font-bold font-mono">25 frames</span>
-                    </div>
-                    <input type="range" id="frameSlider" min="5" max="150" value="25" class="w-full">
-                </div>
-
-                <div class="flex flex-col space-y-0.5">
-                    <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                        <span>Desvanecimiento (Decay)</span>
-                        <span id="decayValue" class="text-amber-400 font-bold font-mono">100%</span>
-                    </div>
-                    <input type="range" id="decaySlider" min="80" max="100" value="100" class="w-full">
+            <div class="control-group">
+                <label>Límite de FPS Captura</label>
+                <div class="slider-container">
+                    <input type="range" id="fpsSlider" min="1" max="60" step="1" value="30">
+                    <span id="fpsValue" class="value-display">30</span>
                 </div>
             </div>
+
+            <div class="control-group" style="grid-column: 1 / -1; display: flex; flex-direction: row; gap: 1rem; justify-content: center;">
+                <button id="btnCapture" class="active">Iniciar Captura</button>
+                <button id="btnClear">Limpiar Acumulador</button>
+            </div>
         </div>
+    </div>
 
-        <div class="flex items-center justify-between landscape:justify-end landscape:space-x-4 px-2 landscape:px-0">
-            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-red-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg" title="Volver a Stream en vivo">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-
-            <button id="btnCapture" class="relative w-20 h-20 landscape:w-20 landscape:h-20 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition flex-shrink-0">
-                <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full transition-all duration-200 flex items-center justify-center shadow-inner">
-                    <i id="shutterIcon" class="fa-solid fa-bolt text-white text-xl leading-none transition-opacity duration-200"></i>
-                </div>
-            </button>
-
-            <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar Foto">
-                <i id="downloadIcon" class="fa-solid fa-arrow-down text-base"></i>
-            </button>
-        </div>
-    </footer>
+    <video id="videoElement" autoplay playsinline loop muted></video>
 
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('glCanvas');
-        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
-
-        const frameSlider = document.getElementById('frameSlider');
-        const frameCountValue = document.getElementById('frameCountValue');
-        const decaySlider = document.getElementById('decaySlider');
-        const decayValue = document.getElementById('decayValue');
-
-        const btnCapture = document.getElementById('btnCapture');
-        const shutterInner = document.getElementById('shutterInner');
-        const shutterIcon = document.getElementById('shutterIcon');
-        const btnReset = document.getElementById('btnReset');
-        const btnDownload = document.getElementById('btnDownload');
-        const downloadIcon = document.getElementById('downloadIcon');
-        const btnSwitchCamera = document.getElementById('btnSwitchCamera');
-        const btnFullscreen = document.getElementById('btnFullscreen');
-        const btnShaderMode = document.getElementById('btnShaderMode');
-        const shaderLabel = document.getElementById('shaderLabel');
-        const statusText = document.getElementById('statusText');
-        const statusDot = document.getElementById('statusDot');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressPercent = document.getElementById('progressPercent');
-        const configPanel = document.getElementById('configPanel');
-
-        let currentFacingMode = 'environment';
-        let currentStream = null;
-        let isCapturing = false;
-        let isLivePreview = true;
-        let capturedFramesCount = 0;
-        let targetFrames = 25;
-        let decayVal = 1.0;
-
-        // --- SHADERS WEBGL ---
+        // --- CÓDIGO DE LOS SHADERS ---
 
         const vsSource = `
             attribute vec2 a_position;
             varying vec2 v_texCoord;
             uniform float u_flipY;
+
             void main() {
-                v_texCoord = vec2((a_position.x + 1.0) / 2.0, (a_position.y + 1.0) / 2.0);
-                if (u_flipY > 0.5) {
-                    v_texCoord.y = 1.0 - v_texCoord.y;
-                }
                 gl_Position = vec4(a_position, 0.0, 1.0);
+                vec2 coord = a_position * 0.5 + 0.5;
+                if (u_flipY > 0.5) {
+                    v_texCoord = vec2(coord.x, 1.0 - coord.y);
+                } else {
+                    v_texCoord = coord;
+                }
             }
         `;
 
-        const fsPassthrough = `
+        const fsPassThrough = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             varying vec2 v_texCoord;
+
             void main() {
                 gl_FragColor = texture2D(u_currentFrame, v_texCoord);
             }
         `;
 
-        // Shader: Promedio
+        // Modos de Combinación / Acumulación
         const fsAverage = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
             uniform float u_decay;
             varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
-                gl_FragColor = mix(accum, current, 0.12);
-            }
-        `;
 
-        // Shader: Estelas de Luz
-        const fsLight = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
-                float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
-                float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
-                gl_FragColor = (lumaC > lumaA) ? current : accum;
-            }
-        `;
-
-        // Shader: Sombras
-        const fsShadow = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-                float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
-                float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
-                gl_FragColor = (lumaC < lumaA) ? current : accum;
+                gl_FragColor = mix(accum, current, 1.0 - u_decay);
             }
         `;
 
-        // Shader: Fantasma
+        const fsLightTrails = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                gl_FragColor = max(current, accum);
+            }
+        `;
+
+        const fsDarkTrails = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = mix(vec4(1.0), texture2D(u_accumulatedFrame, v_texCoord), u_decay);
+                gl_FragColor = min(current, accum);
+            }
+        `;
+
         const fsGhost = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
             uniform float u_decay;
             varying vec2 v_texCoord;
+
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
-                vec3 screenColor = 1.0 - (1.0 - accum.rgb) * (1.0 - current.rgb);
-                gl_FragColor = vec4(mix(accum.rgb, screenColor, 0.15), 1.0);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                gl_FragColor = accum * u_decay + current * (1.0 - u_decay);
             }
         `;
 
-        // Shader: Movimiento (Máscara: Fondo Blanco y Movimiento en Negro)
+        // MODO 5: Máscara de Movimiento sobre Blanco Puro
         const fsMotion = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
+            uniform sampler2D u_referenceFrame;
             uniform float u_decay;
             varying vec2 v_texCoord;
 
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 reference = texture2D(u_referenceFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
                 
-                // Calculamos la diferencia entre la imagen previa y la actual
-                vec3 diff = abs(current.rgb - accum.rgb);
-                float motion = dot(diff, vec3(0.333)); // Luminancia/Luma del cambio
+                // Calculamos la diferencia contra el fondo de referencia inicial
+                vec3 diff = abs(current.rgb - reference.rgb);
+                float motion = dot(diff, vec3(0.299, 0.587, 0.114));
                 
-                // Si hay movimiento significativo (> 0.12), pintamos NEGRO
-                if (motion > 0.12) {
-                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Negro para los cambios
+                // Si detecta cambio significativo, dibuja trazo negro
+                if (motion > 0.09) {
+                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
                 } else {
-                    // Fondo original
-                    gl_FragColor = current;
+                    // Preserva el negro previo o se desvanece suavemente a blanco
+                    vec4 fadeToWhite = mix(vec4(1.0), accum, u_decay);
+                    gl_FragColor = fadeToWhite;
                 }
             }
         `;
 
-        const shaderModes = [
-            { name: '1 PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
-            { name: '2 ESTELAS LUZ', fs: fsLight, class: 'text-amber-400 font-bold' },
-            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
-            { name: '4 FANTASMA', fs: fsGhost, class: 'text-purple-400 font-bold' },
-            { name: '5 MOVIMIENTO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
-        ];
-        let currentShaderIndex = 0;
+        // --- ESTADO Y VARIABLES GLOBALES ---
 
-        let passProgram, blendProgram;
-        let textures = [], framebuffers = [];
-        let videoTexture = null;
-        let pingPongCount = 0;
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+
+        if (!gl) {
+            alert("Tu navegador no soporta WebGL.");
+        }
+
+        const video = document.getElementById('videoElement');
+        const sourceSelect = document.getElementById('sourceSelect');
+        const fileInput = document.getElementById('fileInput');
+        const modeSelect = document.getElementById('modeSelect');
+        const decaySlider = document.getElementById('decaySlider');
+        const decayValue = document.getElementById('decayValue');
+        const fpsSlider = document.getElementById('fpsSlider');
+        const fpsValue = document.getElementById('fpsValue');
+        const btnCapture = document.getElementById('btnCapture');
+        const btnClear = document.getElementById('btnClear');
+
+        let isCapturing = true;
+        let targetFPS = 30;
+        let lastFrameTime = 0;
+        let decay = 0.95;
+        let currentShaderIndex = 4; // Por defecto Modo Movimiento
+
+        // WebGL Pipeline Objects
+        let passProgram, blendPrograms = [];
+        let quadBuffer;
+        let videoTexture, referenceTexture;
+        let framebuffers = [], textures = [];
+        let pingPongIndex = 0;
+        let isInitialized = false;
+
+        const shaderModes = [
+            { name: "Promedio Continuo", shader: fsAverage },
+            { name: "Estelas de Luz", shader: fsLightTrails },
+            { name: "Sombras Acumuladas", shader: fsDarkTrails },
+            { name: "Efecto Fantasma", shader: fsGhost },
+            { name: "Máscara de Movimiento", shader: fsMotion }
+        ];
+
+        // --- FUNCIONES UTILITARIAS WEBGL ---
 
         function createShader(gl, type, source) {
             const shader = gl.createShader(type);
             gl.shaderSource(shader, source);
             gl.compileShader(shader);
             if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                console.error(gl.getShaderInfoLog(shader));
+                console.error("Error al compilar shader:", gl.getShaderInfoLog(shader));
                 gl.deleteShader(shader);
                 return null;
             }
             return shader;
         }
 
-        function createProgram(vsSource, fsSource) {
+        function createProgram(gl, vsSource, fsSource) {
             const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
             const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
-            const prog = gl.createProgram();
-            gl.attachShader(prog, vs);
-            gl.attachShader(prog, fs);
-            gl.linkProgram(prog);
-            return prog;
+            const program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error("Error al vincular programa:", gl.getProgramInfoLog(program));
+                return null;
+            }
+            return program;
         }
 
-        function initGLResources(w, h) {
-            passProgram = createProgram(vsSource, fsPassthrough);
-            blendProgram = createProgram(vsSource, shaderModes[currentShaderIndex].fs);
+        function initGLResources(width, height) {
+            canvas.width = width;
+            canvas.height = height;
+            gl.viewport(0, 0, width, height);
 
+            // 1. Crear el plano / quad de renderizado
+            quadBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1.0, -1.0,
+                 1.0, -1.0,
+                -1.0,  1.0,
+                 1.0,  1.0,
+            ]), gl.STATIC_DRAW);
+
+            // 2. Programas Shaders
+            passProgram = createProgram(gl, vsSource, fsPassThrough);
+            blendPrograms = shaderModes.map(m => createProgram(gl, vsSource, m.shader));
+
+            // 3. Textura de Entrada de Video
             videoTexture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -315,25 +405,19 @@
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-            const positionBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-                -1, -1,
-                 1, -1,
-                -1,  1,
-                 1,  1,
-            ]), gl.STATIC_DRAW);
+            // 4. Textura de Fondo de Referencia (Para Modo Movimiento)
+            referenceTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, referenceTexture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-            initFramebuffers(w, h);
-        }
-
-        function initFramebuffers(w, h) {
-            textures = [];
-            framebuffers = [];
+            // 5. Framebuffers Ping-Pong para acumulación
             for (let i = 0; i < 2; i++) {
                 const tex = gl.createTexture();
                 gl.bindTexture(gl.TEXTURE_2D, tex);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -346,312 +430,217 @@
                 textures.push(tex);
                 framebuffers.push(fb);
             }
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        }
-
-        // Función que redibuja la textura acumulada sobre el canvas
-        function renderCapturedResult() {
-            if (textures.length === 0) return;
-            const finalIdx = (pingPongCount) % 2;
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.useProgram(passProgram);
-
-            const posLocPass = gl.getAttribLocation(passProgram, "a_position");
-            gl.enableVertexAttribArray(posLocPass);
-            gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
-
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, textures[finalIdx]);
-            gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
-
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            isInitialized = true;
+            resetAccumulator();
         }
 
-        // Manejo seguro de rotaciones y cambio de tamaño
-        function handleResize() {
-            if (!video.videoWidth || !video.videoHeight) return;
+        function resetAccumulator() {
+            if (!isInitialized) return;
 
-            const w = video.videoWidth;
-            const h = video.videoHeight;
+            // En el Modo Movimiento (índice 4) el lienzo inicia blanco puro y guarda foto de referencia
+            if (currentShaderIndex === 4 && video.readyState >= 2) {
+                // Guardar la foto de referencia inicial
+                gl.bindTexture(gl.TEXTURE_2D, referenceTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
-            // Si está en vivo, podemos reiniciar texturas al tamaño nuevo de la cámara
-            if (isLivePreview) {
-                if (canvas.width !== w || canvas.height !== h) {
-                    canvas.width = w;
-                    canvas.height = h;
-                    gl.viewport(0, 0, w, h);
-                    initFramebuffers(w, h);
+                // Llenar el acumulador inicial con Blanco Puro
+                gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
+                gl.clearColor(1.0, 1.0, 1.0, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[1]);
+                gl.clearColor(1.0, 1.0, 1.0, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            } else {
+                // Para los demás modos (1 al 4) copia el cuadro normal del video
+                for (let i = 0; i < 2; i++) {
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[i]);
+                    if (video.readyState >= 2) {
+                        gl.useProgram(passProgram);
+                        
+                        const posLoc = gl.getAttribLocation(passProgram, "a_position");
+                        gl.enableVertexAttribArray(posLoc);
+                        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+                        gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 0.0);
+                        gl.activeTexture(gl.TEXTURE0);
+                        gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+                        gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
+
+                        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    } else {
+                        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                        gl.clear(gl.COLOR_BUFFER_BIT);
+                    }
                 }
-            } else if (!isCapturing) {
-                // Si la captura YA finalizó y rotamos el teléfono:
-                // Solo ajustamos el Viewport para adaptar la vista, resguardando la foto capturada
-                gl.viewport(0, 0, canvas.width, canvas.height);
-                renderCapturedResult();
             }
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            pingPongIndex = 0;
         }
 
-        async function initCamera() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
+        // --- BUCLE DE RENDERING ---
 
-            try {
-                currentStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: { ideal: currentFacingMode },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
-                    audio: false
-                });
-                video.srcObject = currentStream;
-                await video.play();
+        function processFrame(now) {
+            requestAnimationFrame(processFrame);
 
-                canvas.width = video.videoWidth || 1280;
-                canvas.height = video.videoHeight || 720;
-                gl.viewport(0, 0, canvas.width, canvas.height);
+            if (!isInitialized || video.paused || video.ended || video.readyState < 2) return;
 
-                initGLResources(canvas.width, canvas.height);
-                startLivePreview();
+            const elapsed = now - lastFrameTime;
+            const fpsInterval = 1000 / targetFPS;
 
-            } catch (err) {
-                console.error("Error cámara:", err);
-                statusText.textContent = "ERROR CÁMARA";
-                statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
-            }
-        }
+            if (elapsed >= fpsInterval) {
+                lastFrameTime = now - (elapsed % fpsInterval);
 
-        function startLivePreview() {
-            isLivePreview = true;
-            isCapturing = false;
+                // Actualizar la textura con el frame actual de la cámara
+                gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
-            statusText.textContent = "VIVO";
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                if (isCapturing) {
+                    const readIndex = pingPongIndex;
+                    const writeIndex = 1 - pingPongIndex;
 
-            function renderLive() {
-                if (!isLivePreview) return;
+                    // 1. Procesar la mezcla/acumulación en el Framebuffer Secundario
+                    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIndex]);
+                    const blendProg = blendPrograms[currentShaderIndex];
+                    gl.useProgram(blendProg);
 
-                if (video.readyState >= 2) {
-                    handleResize();
-
-                    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-
-                    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-                    gl.useProgram(passProgram);
-
-                    const posLoc = gl.getAttribLocation(passProgram, "a_position");
+                    const posLoc = gl.getAttribLocation(blendProg, "a_position");
                     gl.enableVertexAttribArray(posLoc);
+                    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
                     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-                    gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
+                    // Frame Actual
                     gl.activeTexture(gl.TEXTURE0);
                     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-                    gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
+                    gl.uniform1i(gl.getUniformLocation(blendProg, "u_currentFrame"), 0);
+
+                    // Frame Acumulado previo
+                    gl.activeTexture(gl.TEXTURE1);
+                    gl.bindTexture(gl.TEXTURE_2D, textures[readIndex]);
+                    gl.uniform1i(gl.getUniformLocation(blendProg, "u_accumulatedFrame"), 1);
+
+                    // Textura de Referencia (Solo usada en Modo Movimiento)
+                    gl.activeTexture(gl.TEXTURE2);
+                    gl.bindTexture(gl.TEXTURE_2D, referenceTexture);
+                    gl.uniform1i(gl.getUniformLocation(blendProg, "u_referenceFrame"), 2);
+
+                    // Parámetros
+                    gl.uniform1f(gl.getUniformLocation(blendProg, "u_decay"), decay);
+                    gl.uniform1f(gl.getUniformLocation(blendProg, "u_flipY"), 1.0); // Corregir orientación FBO
 
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+                    pingPongIndex = writeIndex;
                 }
 
-                requestAnimationFrame(renderLive);
+                // 2. Renderizar el acumulado final directamente en la Pantalla
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.useProgram(passProgram);
+
+                const posLocPass = gl.getAttribLocation(passProgram, "a_position");
+                gl.enableVertexAttribArray(posLocPass);
+                gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+                gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, textures[pingPongIndex]);
+                gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
+                gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 0.0);
+
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             }
-            requestAnimationFrame(renderLive);
         }
 
-        btnCapture.addEventListener('click', () => {
-            if (isCapturing) return;
+        // --- GESTIÓN DE FUENTES DE VIDEO ---
 
-            isLivePreview = false;
-            isCapturing = true;
-            capturedFramesCount = 0;
-            pingPongCount = 0;
+        async function startWebcam() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: false
+                });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    if (!isInitialized) {
+                        initGLResources(video.videoWidth, video.videoHeight);
+                    } else {
+                        resetAccumulator();
+                    }
+                };
+            } catch (err) {
+                alert("No se pudo acceder a la webcam: " + err.message);
+            }
+        }
 
-            targetFrames = parseInt(frameSlider.value);
-            decayVal = parseInt(decaySlider.value) / 100;
+        // --- EVENTOS INTERFAZ Y CONTROLES ---
 
-            configPanel.style.opacity = '0.3';
-            configPanel.style.pointerEvents = 'none';
-            btnSwitchCamera.style.opacity = '0.3';
-            btnSwitchCamera.style.pointerEvents = 'none';
-            btnDownload.disabled = true;
-            btnDownload.classList.add('opacity-40', 'cursor-not-allowed');
-
-            statusText.textContent = `(0/${targetFrames})`;
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
-            progressContainer.classList.remove('hidden');
-
-            shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all flex items-center justify-center";
-            shutterIcon.classList.add('opacity-0');
-
-            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
-            gl.useProgram(passProgram);
-
-            const posLoc = gl.getAttribLocation(passProgram, "a_position");
-            gl.enableVertexAttribArray(posLoc);
-            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 0.0);
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-            gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
-
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-            processFrame();
+        sourceSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'file') {
+                fileInput.style.display = 'block';
+                fileInput.click();
+            } else {
+                fileInput.style.display = 'none';
+                if (video.srcObject) {
+                    startWebcam();
+                }
+            }
         });
 
-        function processFrame() {
-            if (!isCapturing) return;
-
-            capturedFramesCount++;
-
-            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-
-            const readIdx = pingPongCount % 2;
-            const writeIdx = (pingPongCount + 1) % 2;
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
-            gl.useProgram(blendProgram);
-
-            const posLoc = gl.getAttribLocation(blendProgram, "a_position");
-            gl.enableVertexAttribArray(posLoc);
-            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-            gl.uniform1f(gl.getUniformLocation(blendProgram, "u_flipY"), 0.0);
-
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-            gl.uniform1i(gl.getUniformLocation(blendProgram, "u_currentFrame"), 0);
-
-            gl.activeTexture(gl.TEXTURE1);
-            gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
-            gl.uniform1i(gl.getUniformLocation(blendProgram, "u_accumulatedFrame"), 1);
-
-            gl.uniform1f(gl.getUniformLocation(blendProgram, "u_decay"), decayVal);
-
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.useProgram(passProgram);
-
-            const posLocPass = gl.getAttribLocation(passProgram, "a_position");
-            gl.enableVertexAttribArray(posLocPass);
-            gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
-
-            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0);
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, textures[writeIdx]);
-            gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
-
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-            pingPongCount++;
-
-            const percent = Math.round((capturedFramesCount / targetFrames) * 100);
-            progressBar.style.width = `${percent}%`;
-            progressPercent.textContent = `${percent}%`;
-            statusText.textContent = `(${capturedFramesCount}/${targetFrames})`;
-
-            if (capturedFramesCount >= targetFrames) {
-                finalizarCaptura();
-            } else {
-                requestAnimationFrame(processFrame);
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                }
+                video.src = URL.createObjectURL(file);
+                video.onloadedmetadata = () => {
+                    video.play();
+                    if (!isInitialized) {
+                        initGLResources(video.videoWidth, video.videoHeight);
+                    } else {
+                        resetAccumulator();
+                    }
+                };
             }
-        }
+        });
 
-        function finalizarCaptura() {
-            isCapturing = false;
-
-            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
-            shutterIcon.classList.remove('opacity-0');
-            progressContainer.classList.add('hidden');
-
-            statusText.textContent = "LISTO";
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
-
-            configPanel.style.opacity = '1';
-            configPanel.style.pointerEvents = 'auto';
-            btnSwitchCamera.style.opacity = '1';
-            btnSwitchCamera.style.pointerEvents = 'auto';
-
-            btnDownload.disabled = false;
-            btnDownload.classList.remove('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
-            btnDownload.classList.add('text-amber-400', 'hover:bg-neutral-800');
-        }
-
-        // --- EVENTOS DE INTERFAZ ---
-
-        frameSlider.addEventListener('input', (e) => {
-            frameCountValue.textContent = `${e.target.value} frames`;
+        modeSelect.addEventListener('change', (e) => {
+            currentShaderIndex = parseInt(e.target.value);
+            resetAccumulator();
         });
 
         decaySlider.addEventListener('input', (e) => {
-            decayValue.textContent = `${e.target.value}%`;
+            decay = parseFloat(e.target.value);
+            decayValue.textContent = decay.toFixed(3);
         });
 
-        btnShaderMode.addEventListener('click', () => {
-            currentShaderIndex = (currentShaderIndex + 1) % shaderModes.length;
-            const current = shaderModes[currentShaderIndex];
-            shaderLabel.textContent = current.name;
-            shaderLabel.className = current.class;
-
-            blendProgram = createProgram(vsSource, current.fs);
+        fpsSlider.addEventListener('input', (e) => {
+            targetFPS = parseInt(e.target.value);
+            fpsValue.textContent = targetFPS;
         });
 
-        btnReset.addEventListener('click', () => {
-            if (isCapturing) return;
-
-            btnDownload.disabled = true;
-            btnDownload.classList.add('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
-            btnDownload.classList.remove('text-amber-400', 'hover:bg-neutral-800');
-            downloadIcon.className = "fa-solid fa-arrow-down text-base";
-
-            startLivePreview();
-        });
-
-        btnSwitchCamera.addEventListener('click', () => {
-            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
-            initCamera();
-        });
-
-        btnFullscreen.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => console.warn(err));
-            } else if (document.exitFullscreen) {
-                document.exitFullscreen();
+        btnCapture.addEventListener('click', () => {
+            isCapturing = !isCapturing;
+            if (isCapturing) {
+                btnCapture.textContent = "Pausar Captura";
+                btnCapture.classList.add('active');
+            } else {
+                btnCapture.textContent = "Reanudar Captura";
+                btnCapture.classList.remove('active');
             }
         });
 
-        btnDownload.addEventListener('click', () => {
-            if (btnDownload.disabled) return;
-
-            const shaderName = shaderModes[currentShaderIndex].name.replace(/[^a-zA-Z0-9]/g, '_');
-            const frames = frameSlider.value;
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            const fechaStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-            const fileName = `${shaderName}_${frames}f_${fechaStr}.jpg`;
-
-            const link = document.createElement('a');
-            link.download = fileName;
-            link.href = canvas.toDataURL('image/jpeg', 0.95);
-            link.click();
-
-            downloadIcon.className = "fa-solid fa-check text-base text-emerald-400";
-            btnDownload.classList.add('scale-110');
-            setTimeout(() => {
-                downloadIcon.className = "fa-solid fa-arrow-down text-base text-amber-400";
-                btnDownload.classList.remove('scale-110');
-            }, 1000);
+        btnClear.addEventListener('click', () => {
+            resetAccumulator();
         });
 
-        window.addEventListener('resize', handleResize);
-        window.addEventListener('load', initCamera);
+        // --- INICIALIZACIÓN ---
+        startWebcam();
+        requestAnimationFrame(processFrame);
     </script>
 </body>
 </html>
