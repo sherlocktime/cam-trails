@@ -110,12 +110,17 @@
         let isCapturing = false;
         let isComplete = false;
 
+        // Vertex Shader Corregido: Limpieza total de coordenadas UV
         const vsSource = `
             attribute vec2 a_position;
             varying vec2 v_texCoord;
             uniform float u_flipY;
             void main() {
-                v_texCoord = vec2((a_position.x + 1.0) / 2.0, (u_flipY * a_position.y + 1.0) / 2.0);
+                vec2 uv = (a_position + 1.0) * 0.5;
+                if (u_flipY < 0.0) {
+                    uv.y = 1.0 - uv.y;
+                }
+                v_texCoord = uv;
                 gl_Position = vec4(a_position, 0.0, 1.0);
             }
         `;
@@ -326,7 +331,7 @@
                 const posLoc = 0;
 
                 if (!isCapturing && !isComplete) {
-                    // PREVIEW VIVO
+                    // PREVIEW VIVO (Cámara invertida verticalmente para coincidir con el estándar WebGL)
                     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                     gl.useProgram(progPassthrough);
                     gl.uniform1f(gl.getUniformLocation(progPassthrough, "u_flipY"), -1.0);
@@ -340,12 +345,11 @@
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
                 } else if (isCapturing) {
-                    // PROCESAMIENTO MODO CAPTURA
                     capturedFrames++;
                     const readIdx = count % 2;
                     const writeIdx = (count + 1) % 2;
 
-                    // Frame 1: Capturar imagen base congelada
+                    // Frame 1: Captura foto base
                     if (capturedFrames === 1) {
                         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[readIdx]);
                         gl.useProgram(progPassthrough);
@@ -358,7 +362,7 @@
                         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
                     }
 
-                    // Pasar al shader seleccionado
+                    // Acumulación Ping-Pong
                     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
                     gl.useProgram(progProcess);
                     gl.uniform1f(gl.getUniformLocation(progProcess, "u_flipY"), -1.0);
@@ -371,7 +375,7 @@
                     gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
                     gl.uniform1i(gl.getUniformLocation(progProcess, "u_accumulatedFrame"), 1);
 
-                    if (activeShaderIndex === 4) { // Promedio
+                    if (activeShaderIndex === 4) {
                         const weight = 1.0 / capturedFrames;
                         gl.uniform1f(gl.getUniformLocation(progProcess, "u_frameWeight"), weight);
                     } else {
@@ -382,7 +386,7 @@
                     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-                    // Render a Pantalla
+                    // Dibujado directo en pantalla (las texturas WebGL internas no requieren flip adicional)
                     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                     gl.useProgram(progPassthrough);
                     gl.uniform1f(gl.getUniformLocation(progPassthrough, "u_flipY"), 1.0);
