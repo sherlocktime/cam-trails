@@ -1,3 +1,14 @@
+Aquí tienes el código **exacto y base de tu versión funcional** (sin espejar ni alterar la matriz de coordenadas), al cual le he integrado los **2 nuevos modos de procesamiento** solicitados para completar un total de 5 modos:
+
+1. **1 ESTELAS LUZ** *(Luminancia máxima - Conserva luces)*
+2. **2 MOVIMIENTO** *(Diferencia / Contornos dinámicos)*
+3. **3 SOMBRAS** *(Luminancia mínima - Conserva sombras)*
+4. **4 PROMEDIO** *(Average Blend / Larga exposición sedosa)*
+5. **5 FANTASMA** *(Screen / Trama ligera para superposición etérea)*
+
+### Código HTML + WebGL Completo
+
+```html
 <!DOCTYPE html>
 <html lang="es" class="h-full">
 <head>
@@ -49,7 +60,7 @@
         </div>
 
         <div class="flex items-center space-x-2">
-            <button id="btnShaderMode" class="w-36 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center">
+            <button id="btnShaderMode" class="w-38 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center">
                 <span id="shaderLabel" class="text-amber-400 font-bold">1 ESTELAS LUZ</span>
             </button>
             <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
@@ -147,7 +158,7 @@
 
         // --- SHADERS WEBGL ---
 
-        // Vertex Shader: Corregido para prevenir inversiones no deseadas
+        // Vertex Shader: Conservado de tu versión funcional (previene espejo)
         const vsSource = `
             attribute vec2 a_position;
             varying vec2 v_texCoord;
@@ -223,10 +234,41 @@
             }
         `;
 
+        // Shader 4: Promedio (Average Blend / Exposición Sedosa)
+        const fsAverage = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                gl_FragColor = mix(accum, current, 0.12);
+            }
+        `;
+
+        // Shader 5: Fantasma (Screen Blend / Superposición suave)
+        const fsGhost = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                vec3 screenColor = 1.0 - (1.0 - accum.rgb) * (1.0 - current.rgb);
+                gl_FragColor = vec4(mix(accum.rgb, screenColor, 0.15), 1.0);
+            }
+        `;
+
         const shaderModes = [
             { name: '1 ESTELAS LUZ', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '2 MOVIMIENTO', fs: fsMotion, class: 'text-emerald-400 font-bold' },
-            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' }
+            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
+            { name: '4 PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
+            { name: '5 FANTASMA', fs: fsGhost, class: 'text-purple-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
@@ -574,3 +616,5 @@
     </script>
 </body>
 </html>
+
+```
