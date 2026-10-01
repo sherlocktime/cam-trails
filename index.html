@@ -3,15 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Re-Trazado GPU Multi-Shader</title>
+    <title>Re-Trazado WebGL</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        body { background-color: #000; color: #fff; user-select: none; touch-action: manipulation; }
-        input[type=range] { -webkit-appearance: none; background: rgba(255, 255, 255, 0.2); height: 4px; border-radius: 2px; }
+        body {
+            background-color: #000;
+            color: #ffffff;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        input[type=range] {
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.25);
+            height: 4px;
+            border-radius: 2px;
+        }
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
-            background: #f59e0b; cursor: pointer; box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #f59e0b;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
         }
     </style>
 </head>
@@ -22,29 +42,31 @@
         <canvas id="glCanvas" class="w-full h-full object-cover"></canvas>
     </main>
 
-    <header class="absolute top-0 left-0 right-0 px-4 pt-3 pb-2 flex justify-between items-center z-20">
+    <header class="absolute top-0 left-0 right-0 px-4 pt-3 pb-2 flex justify-between items-center z-20 pointer-events-auto">
         <div class="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono tracking-wide flex items-center space-x-2 shadow-lg">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
             <span id="statusText" class="font-semibold text-neutral-200">VIVO</span>
         </div>
 
         <div class="flex items-center space-x-2">
-            <button id="btnShaderMode" class="bg-black/60 backdrop-blur-md border border-white/10 px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center space-x-1.5">
-                <i class="fa-solid fa-layer-group text-amber-400 text-[10px]"></i>
+            <button id="btnShaderMode" class="w-36 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center">
                 <span id="shaderLabel" class="text-amber-400 font-bold">1 ESTELAS LUZ</span>
             </button>
-            <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg">
+            <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
+                <i class="fa-solid fa-expand text-xs"></i>
+            </button>
+            <button id="btnSwitchCamera" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Cambiar Cámara">
                 <i class="fa-solid fa-camera-rotate text-xs"></i>
             </button>
         </div>
     </header>
 
-    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 z-20 flex flex-col landscape:flex-row landscape:justify-between landscape:items-end space-y-3 landscape:space-y-0">
-        <div id="controlsContainer" class="flex flex-col space-y-2 w-full landscape:w-72 bg-black/50 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 shadow-xl transition-all">
-            
-            <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full pb-1 mb-1 border-b border-white/10">
+    <footer class="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-2 landscape:pb-3 landscape:px-6 backdrop-blur-[2px] z-20 flex flex-col landscape:flex-row landscape:justify-between landscape:items-end space-y-3 landscape:space-y-0">
+
+        <div class="flex flex-col space-y-2 w-full landscape:w-72">
+            <div id="progressContainer" class="hidden flex flex-col space-y-1 w-full bg-black/60 backdrop-blur-md p-2.5 rounded-xl border border-white/10">
                 <div class="flex justify-between text-[11px] font-mono text-amber-400">
-                    <span id="progressLabel">Procesando GPU...</span>
+                    <span id="progressLabel">Procesando frames (GPU)...</span>
                     <span id="progressPercent">0%</span>
                 </div>
                 <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
@@ -52,33 +74,37 @@
                 </div>
             </div>
 
-            <div class="flex flex-col space-y-0.5">
-                <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                    <span>Frames a acumular</span>
-                    <span id="frameCountVal" class="text-amber-400 font-bold font-mono">30 frames</span>
+            <div id="configPanel" class="flex flex-col space-y-2 bg-black/50 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 shadow-xl">
+                <div class="flex flex-col space-y-0.5">
+                    <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
+                        <span>Frames a acumular</span>
+                        <span id="frameCountValue" class="text-amber-400 font-bold font-mono">25 frames</span>
+                    </div>
+                    <input type="range" id="frameSlider" min="5" max="150" value="25" class="w-full">
                 </div>
-                <input type="range" id="frameSlider" min="5" max="150" value="30" class="w-full">
-            </div>
 
-            <div class="flex flex-col space-y-0.5 pt-1">
-                <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                    <span>Desvanecimiento / Mezcla</span>
-                    <span id="decayVal" class="text-amber-400 font-bold font-mono">0.95</span>
+                <div class="flex flex-col space-y-0.5">
+                    <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
+                        <span>Desvanecimiento (Decay)</span>
+                        <span id="decayValue" class="text-amber-400 font-bold font-mono">100%</span>
+                    </div>
+                    <input type="range" id="decaySlider" min="80" max="100" value="100" class="w-full">
                 </div>
-                <input type="range" id="decaySlider" min="70" max="99" value="95" class="w-full">
             </div>
         </div>
 
-        <div class="flex items-center justify-between landscape:justify-end landscape:space-x-4 px-2">
-            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-red-500 active:scale-95 transition shadow-lg" title="Reset / Volver a VIVO">
-                <i class="fa-solid fa-rotate-right text-lg"></i>
+        <div class="flex items-center justify-between landscape:justify-end landscape:space-x-4 px-2 landscape:px-0">
+            <button id="btnReset" class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-red-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg" title="Volver a Stream en vivo">
+                <i class="fa-solid fa-xmark text-xl"></i>
             </button>
-            <button id="btnCapture" class="relative w-20 h-20 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition">
-                <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner">
-                    <i id="shutterIcon" class="fa-solid fa-camera text-white text-xl"></i>
+
+            <button id="btnCapture" class="relative w-20 h-20 landscape:w-20 landscape:h-20 rounded-full border-4 border-white/90 bg-black/20 backdrop-blur-sm flex items-center justify-center p-1 shadow-2xl active:scale-95 transition flex-shrink-0">
+                <div id="shutterInner" class="w-full h-full bg-amber-500 rounded-full transition-all duration-200 flex items-center justify-center shadow-inner">
+                    <i id="shutterIcon" class="fa-solid fa-bolt text-white text-xl leading-none transition-opacity duration-200"></i>
                 </div>
             </button>
-            <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar foto">
+
+            <button id="btnDownload" disabled class="w-12 h-12 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-neutral-500 hover:bg-neutral-800 active:scale-95 transition shadow-lg opacity-40 cursor-not-allowed" title="Guardar Foto">
                 <i id="downloadIcon" class="fa-solid fa-arrow-down text-base"></i>
             </button>
         </div>
@@ -89,42 +115,53 @@
         const canvas = document.getElementById('glCanvas');
         const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
 
-        const statusText = document.getElementById('statusText');
-        const statusDot = document.getElementById('statusDot');
+        const frameSlider = document.getElementById('frameSlider');
+        const frameCountValue = document.getElementById('frameCountValue');
+        const decaySlider = document.getElementById('decaySlider');
+        const decayValue = document.getElementById('decayValue');
+
+        const btnCapture = document.getElementById('btnCapture');
         const shutterInner = document.getElementById('shutterInner');
         const shutterIcon = document.getElementById('shutterIcon');
+        const btnReset = document.getElementById('btnReset');
+        const btnDownload = document.getElementById('btnDownload');
+        const downloadIcon = document.getElementById('downloadIcon');
+        const btnSwitchCamera = document.getElementById('btnSwitchCamera');
+        const btnFullscreen = document.getElementById('btnFullscreen');
+        const btnShaderMode = document.getElementById('btnShaderMode');
+        const shaderLabel = document.getElementById('shaderLabel');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
         const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
         const progressPercent = document.getElementById('progressPercent');
-        const btnDownload = document.getElementById('btnDownload');
-        const downloadIcon = document.getElementById('downloadIcon');
-        const controlsContainer = document.getElementById('controlsContainer');
+        const configPanel = document.getElementById('configPanel');
 
         let currentFacingMode = 'environment';
         let currentStream = null;
-        let activeShaderIndex = 0;
-        let decayValue = 0.95;
-        let targetFrames = 30;
-        let capturedFrames = 0;
-        
         let isCapturing = false;
-        let isComplete = false;
+        let isLivePreview = true;
+        let capturedFramesCount = 0;
+        let targetFrames = 25;
+        let decayVal = 1.0;
 
-        // Vertex Shader sin duplicación
+        // --- SHADERS WEBGL ---
+
+        // Vertex Shader: Corregido para prevenir inversiones no deseadas
         const vsSource = `
             attribute vec2 a_position;
             varying vec2 v_texCoord;
             uniform float u_flipY;
             void main() {
-                vec2 uv = a_position * 0.5 + 0.5;
-                if (u_flipY < 0.0) {
-                    uv.y = 1.0 - uv.y;
+                v_texCoord = vec2((a_position.x + 1.0) / 2.0, (a_position.y + 1.0) / 2.0);
+                if (u_flipY > 0.5) {
+                    v_texCoord.y = 1.0 - v_texCoord.y;
                 }
-                v_texCoord = uv;
                 gl_Position = vec4(a_position, 0.0, 1.0);
             }
         `;
 
+        // Shader Passthrough (VIVO)
         const fsPassthrough = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -134,7 +171,7 @@
             }
         `;
 
-        // 1. ESTELAS LUZ
+        // Shader 1: Estelas de Luz (Light Trails / Max Luminance)
         const fsLight = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -150,7 +187,27 @@
             }
         `;
 
-        // 2. SOMBRAS
+        // Shader 2: Movimiento (Motion Trails / Difference)
+        const fsMotion = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                vec3 diff = abs(current.rgb - accum.rgb);
+                float motion = dot(diff, vec3(0.333));
+                if (motion > 0.12) {
+                    gl_FragColor = vec4(diff * 2.0 + current.rgb * 0.5, 1.0);
+                } else {
+                    gl_FragColor = mix(accum * u_decay, current, 0.05);
+                }
+            }
+        `;
+
+        // Shader 3: Sombras (Shadow Trails / Min Luminance)
         const fsShadow = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -166,73 +223,31 @@
             }
         `;
 
-        // 3. FANTASMA / TRANSPARENCIA
-        const fsGhost = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-                gl_FragColor = mix(accum * u_decay, current, 1.0 - u_decay);
-            }
-        `;
-
-        // 4. DIFERENCIA MOVIMIENTO
-        const fsMotion = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-                vec3 diff = abs(current.rgb - accum.rgb);
-                float dist = length(diff);
-                if (dist > 0.15) {
-                    gl_FragColor = vec4(diff * 2.0 + current.rgb * 0.3, 1.0);
-                } else {
-                    gl_FragColor = mix(accum * u_decay, current, 0.05);
-                }
-            }
-        `;
-
-        // 5. PROMEDIO SUAVE (Larga Exposición)
-        const fsAverage = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_frameWeight;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-                gl_FragColor = mix(accum, current, u_frameWeight);
-            }
-        `;
-
-        const shaders = [
+        const shaderModes = [
             { name: '1 ESTELAS LUZ', fs: fsLight, class: 'text-amber-400 font-bold' },
-            { name: '2 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
-            { name: '3 FANTASMA', fs: fsGhost, class: 'text-emerald-400 font-bold' },
-            { name: '4 DIFERENCIA MOV', fs: fsMotion, class: 'text-cyan-400 font-bold' },
-            { name: '5 PROMEDIO SUAVE', fs: fsAverage, class: 'text-indigo-400 font-bold' }
+            { name: '2 MOVIMIENTO', fs: fsMotion, class: 'text-emerald-400 font-bold' },
+            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' }
         ];
+        let currentShaderIndex = 0;
 
-        let progPassthrough = null;
-        let progProcess = null;
+        let passProgram, blendProgram;
+        let textures = [], framebuffers = [];
+        let videoTexture = null;
+        let pingPongCount = 0;
 
         function createShader(gl, type, source) {
             const shader = gl.createShader(type);
             gl.shaderSource(shader, source);
             gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
             return shader;
         }
 
-        function initProgram(fsSource) {
+        function createProgram(vsSource, fsSource) {
             const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
             const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
             const prog = gl.createProgram();
@@ -242,11 +257,34 @@
             return prog;
         }
 
-        let textures = [], framebuffers = [];
-        let count = 0;
+        function initGLResources(w, h) {
+            passProgram = createProgram(vsSource, fsPassthrough);
+            blendProgram = createProgram(vsSource, shaderModes[currentShaderIndex].fs);
+
+            // Textura del video de la cámara
+            videoTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+            // Buffer de vértices (Quad pantalla completa)
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1, -1,
+                 1, -1,
+                -1,  1,
+                 1,  1,
+            ]), gl.STATIC_DRAW);
+
+            initFramebuffers(w, h);
+        }
 
         function initFramebuffers(w, h) {
-            textures = []; framebuffers = [];
+            textures = [];
+            framebuffers = [];
             for (let i = 0; i < 2; i++) {
                 const tex = gl.createTexture();
                 gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -266,224 +304,270 @@
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         }
 
-        let videoTexture = null;
-        function initVideoTexture() {
-            videoTexture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        }
-
         async function initCamera() {
-            if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-            currentStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }
-            });
-            video.srcObject = currentStream;
-            await video.play();
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
 
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            gl.viewport(0, 0, canvas.width, canvas.height);
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: currentFacingMode },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+                video.srcObject = currentStream;
+                await video.play();
 
-            initFramebuffers(canvas.width, canvas.height);
-            initVideoTexture();
+                canvas.width = video.videoWidth || 1280;
+                canvas.height = video.videoHeight || 720;
+                gl.viewport(0, 0, canvas.width, canvas.height);
 
-            progPassthrough = initProgram(fsPassthrough);
-            progProcess = initProgram(shaders[activeShaderIndex].fs);
+                initGLResources(canvas.width, canvas.height);
+                startLivePreview();
 
-            const positionBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-
-            resetCaptureState();
-            render();
+            } catch (err) {
+                console.error("Error cámara:", err);
+                statusText.textContent = "ERROR CÁMARA";
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
+            }
         }
 
-        function resetCaptureState() {
+        // 1. MODO EN VIVO (Preview directo de la cámara)
+        function startLivePreview() {
+            isLivePreview = true;
             isCapturing = false;
-            isComplete = false;
-            capturedFrames = 0;
-            count = 0;
 
             statusText.textContent = "VIVO";
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-            progressContainer.classList.add('hidden');
-            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
-            shutterIcon.className = "fa-solid fa-camera text-white text-xl";
 
-            controlsContainer.style.opacity = '1';
-            controlsContainer.style.pointerEvents = 'auto';
+            function renderLive() {
+                if (!isLivePreview) return;
 
-            btnDownload.disabled = true;
-            btnDownload.classList.add('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
-            btnDownload.classList.remove('text-amber-400');
-            downloadIcon.className = "fa-solid fa-arrow-down text-base";
-        }
+                if (video.readyState >= 2) {
+                    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
-        function render() {
-            if (!video.paused && video.readyState >= 2) {
-                gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-
-                const posLoc = 0;
-
-                if (!isCapturing && !isComplete) {
-                    // MODO VIVO: Inversión vertical única para video nativo WebGL
                     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-                    gl.useProgram(progPassthrough);
-                    gl.uniform1f(gl.getUniformLocation(progPassthrough, "u_flipY"), -1.0);
+                    gl.useProgram(passProgram);
 
+                    const posLoc = gl.getAttribLocation(passProgram, "a_position");
+                    gl.enableVertexAttribArray(posLoc);
+                    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+                    gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0); // Invertir para WebGL canvas
                     gl.activeTexture(gl.TEXTURE0);
                     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-                    gl.uniform1i(gl.getUniformLocation(progPassthrough, "u_currentFrame"), 0);
+                    gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
 
-                    gl.enableVertexAttribArray(posLoc);
-                    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-                } else if (isCapturing) {
-                    capturedFrames++;
-                    const readIdx = count % 2;
-                    const writeIdx = (count + 1) % 2;
-
-                    // Captura inicial del video
-                    if (capturedFrames === 1) {
-                        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[readIdx]);
-                        gl.useProgram(progPassthrough);
-                        gl.uniform1f(gl.getUniformLocation(progPassthrough, "u_flipY"), -1.0);
-                        gl.activeTexture(gl.TEXTURE0);
-                        gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-                        gl.uniform1i(gl.getUniformLocation(progPassthrough, "u_currentFrame"), 0);
-                        gl.enableVertexAttribArray(posLoc);
-                        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-                        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-                    }
-
-                    // Acumulación Ping-Pong (textura a textura)
-                    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
-                    gl.useProgram(progProcess);
-                    gl.uniform1f(gl.getUniformLocation(progProcess, "u_flipY"), -1.0);
-
-                    gl.activeTexture(gl.TEXTURE0);
-                    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-                    gl.uniform1i(gl.getUniformLocation(progProcess, "u_currentFrame"), 0);
-
-                    gl.activeTexture(gl.TEXTURE1);
-                    gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
-                    gl.uniform1i(gl.getUniformLocation(progProcess, "u_accumulatedFrame"), 1);
-
-                    if (activeShaderIndex === 4) {
-                        const weight = 1.0 / capturedFrames;
-                        gl.uniform1f(gl.getUniformLocation(progProcess, "u_frameWeight"), weight);
-                    } else {
-                        gl.uniform1f(gl.getUniformLocation(progProcess, "u_decay"), decayValue);
-                    }
-
-                    gl.enableVertexAttribArray(posLoc);
-                    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-                    // Render a pantalla final sin doble inversión
-                    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-                    gl.useProgram(progPassthrough);
-                    gl.uniform1f(gl.getUniformLocation(progPassthrough, "u_flipY"), 1.0);
-                    gl.activeTexture(gl.TEXTURE0);
-                    gl.bindTexture(gl.TEXTURE_2D, textures[writeIdx]);
-                    gl.uniform1i(gl.getUniformLocation(progPassthrough, "u_currentFrame"), 0);
-                    gl.enableVertexAttribArray(posLoc);
-                    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-                    const percent = Math.round((capturedFrames / targetFrames) * 100);
-                    progressBar.style.width = `${percent}%`;
-                    progressPercent.textContent = `${percent}%`;
-                    statusText.textContent = `(${capturedFrames}/${targetFrames})`;
-
-                    count++;
-
-                    if (capturedFrames >= targetFrames) {
-                        finishCapture();
-                    }
                 }
+
+                requestAnimationFrame(renderLive);
             }
-            requestAnimationFrame(render);
+            requestAnimationFrame(renderLive);
         }
 
-        function finishCapture() {
-            isCapturing = false;
-            isComplete = true;
-
-            statusText.textContent = "LISTO";
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
-            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner";
-            progressContainer.classList.add('hidden');
-
-            controlsContainer.style.opacity = '1';
-            controlsContainer.style.pointerEvents = 'auto';
-
-            btnDownload.disabled = false;
-            btnDownload.classList.remove('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
-            btnDownload.classList.add('text-amber-400');
-        }
-
-        document.getElementById('frameSlider').addEventListener('input', (e) => {
-            targetFrames = parseInt(e.target.value);
-            document.getElementById('frameCountVal').textContent = `${targetFrames} frames`;
-        });
-
-        document.getElementById('decaySlider').addEventListener('input', (e) => {
-            decayValue = parseFloat(e.target.value) / 100;
-            document.getElementById('decayVal').textContent = decayValue.toFixed(2);
-        });
-
-        document.getElementById('btnShaderMode').addEventListener('click', () => {
-            if (isCapturing) return;
-            activeShaderIndex = (activeShaderIndex + 1) % shaders.length;
-            const s = shaders[activeShaderIndex];
-            document.getElementById('shaderLabel').textContent = s.name;
-            document.getElementById('shaderLabel').className = s.class;
-            progProcess = initProgram(s.fs);
-        });
-
-        document.getElementById('btnCapture').addEventListener('click', () => {
+        // 2. MODO CAPTURA Y ACUMULACIÓN POR SHADER
+        btnCapture.addEventListener('click', () => {
             if (isCapturing) return;
 
+            isLivePreview = false;
             isCapturing = true;
-            isComplete = false;
-            capturedFrames = 0;
+            capturedFramesCount = 0;
+            pingPongCount = 0;
+
+            targetFrames = parseInt(frameSlider.value);
+            decayVal = parseInt(decaySlider.value) / 100;
+
+            // Bloquear interfaz durante captura
+            configPanel.style.opacity = '0.3';
+            configPanel.style.pointerEvents = 'none';
+            btnSwitchCamera.style.opacity = '0.3';
+            btnSwitchCamera.style.pointerEvents = 'none';
+            btnDownload.disabled = true;
+            btnDownload.classList.add('opacity-40', 'cursor-not-allowed');
 
             statusText.textContent = `(0/${targetFrames})`;
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
             progressContainer.classList.remove('hidden');
 
-            shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg flex items-center justify-center";
+            shutterInner.className = "w-full h-full bg-red-600 rounded-full animate-pulse shadow-lg scale-95 transition-all flex items-center justify-center";
+            shutterIcon.classList.add('opacity-0');
+
+            // Cargar frame base inicial en framebuffer 0
+            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
+            gl.useProgram(passProgram);
             
-            controlsContainer.style.opacity = '0.4';
-            controlsContainer.style.pointerEvents = 'none';
+            const posLoc = gl.getAttribLocation(passProgram, "a_position");
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 0.0); // Framebuffer UV estándar
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+            gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
+
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            processFrame();
         });
 
-        document.getElementById('btnReset').addEventListener('click', () => {
-            initFramebuffers(canvas.width, canvas.height);
-            resetCaptureState();
+        function processFrame() {
+            if (!isCapturing) return;
+
+            capturedFramesCount++;
+
+            // Actualizar textura del frame actual del video
+            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+
+            const readIdx = pingPongCount % 2;
+            const writeIdx = (pingPongCount + 1) % 2;
+
+            // 1. Renderizar mezcla en el framebuffer de destino
+            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[writeIdx]);
+            gl.useProgram(blendProgram);
+
+            const posLoc = gl.getAttribLocation(blendProgram, "a_position");
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+            gl.uniform1f(gl.getUniformLocation(blendProgram, "u_flipY"), 0.0);
+
+            // Textura Cámara (Directa)
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+            gl.uniform1i(gl.getUniformLocation(blendProgram, "u_currentFrame"), 0);
+
+            // Textura Acumulada (Frame Anterior)
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
+            gl.uniform1i(gl.getUniformLocation(blendProgram, "u_accumulatedFrame"), 1);
+
+            gl.uniform1f(gl.getUniformLocation(blendProgram, "u_decay"), decayVal);
+
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            // 2. Dibujar el resultado acumulado directamente en la pantalla
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.useProgram(passProgram);
+
+            const posLocPass = gl.getAttribLocation(passProgram, "a_position");
+            gl.enableVertexAttribArray(posLocPass);
+            gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
+
+            gl.uniform1f(gl.getUniformLocation(passProgram, "u_flipY"), 1.0); // Corregir orientación en canvas principal
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, textures[writeIdx]);
+            gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
+
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            pingPongCount++;
+
+            // Actualizar barra de progreso UI
+            const percent = Math.round((capturedFramesCount / targetFrames) * 100);
+            progressBar.style.width = `${percent}%`;
+            progressPercent.textContent = `${percent}%`;
+            statusText.textContent = `(${capturedFramesCount}/${targetFrames})`;
+
+            if (capturedFramesCount >= targetFrames) {
+                finalizarCaptura();
+            } else {
+                requestAnimationFrame(processFrame);
+            }
+        }
+
+        function finalizarCaptura() {
+            isCapturing = false;
+
+            shutterInner.className = "w-full h-full bg-amber-500 rounded-full flex items-center justify-center shadow-inner transition-all";
+            shutterIcon.classList.remove('opacity-0');
+            progressContainer.classList.add('hidden');
+
+            statusText.textContent = "LISTO";
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+
+            configPanel.style.opacity = '1';
+            configPanel.style.pointerEvents = 'auto';
+            btnSwitchCamera.style.opacity = '1';
+            btnSwitchCamera.style.pointerEvents = 'auto';
+
+            btnDownload.disabled = false;
+            btnDownload.classList.remove('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
+            btnDownload.classList.add('text-amber-400', 'hover:bg-neutral-800');
+        }
+
+        // --- EVENTOS DE INTERFAZ ---
+
+        frameSlider.addEventListener('input', (e) => {
+            frameCountValue.textContent = `${e.target.value} frames`;
         });
 
-        document.getElementById('btnSwitchCamera').addEventListener('click', () => {
+        decaySlider.addEventListener('input', (e) => {
+            decayValue.textContent = `${e.target.value}%`;
+        });
+
+        btnShaderMode.addEventListener('click', () => {
+            currentShaderIndex = (currentShaderIndex + 1) % shaderModes.length;
+            const current = shaderModes[currentShaderIndex];
+            shaderLabel.textContent = current.name;
+            shaderLabel.className = current.class;
+
+            blendProgram = createProgram(vsSource, current.fs);
+        });
+
+        btnReset.addEventListener('click', () => {
+            if (isCapturing) return;
+
+            btnDownload.disabled = true;
+            btnDownload.classList.add('opacity-40', 'cursor-not-allowed', 'text-neutral-500');
+            btnDownload.classList.remove('text-amber-400', 'hover:bg-neutral-800');
+            downloadIcon.className = "fa-solid fa-arrow-down text-base";
+
+            startLivePreview();
+        });
+
+        btnSwitchCamera.addEventListener('click', () => {
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
             initCamera();
         });
 
-        document.getElementById('btnDownload').addEventListener('click', () => {
-            if (!isComplete) return;
+        btnFullscreen.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.warn(err));
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        });
+
+        btnDownload.addEventListener('click', () => {
+            if (btnDownload.disabled) return;
+
+            const shaderName = shaderModes[currentShaderIndex].name.replace(/[^a-zA-Z0-9]/g, '_');
+            const frames = frameSlider.value;
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const fechaStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+            const fileName = `${shaderName}_${frames}f_${fechaStr}.jpg`;
+
             const link = document.createElement('a');
-            link.download = `gpu_frame_${activeShaderIndex + 1}_${Date.now()}.jpg`;
+            link.download = fileName;
             link.href = canvas.toDataURL('image/jpeg', 0.95);
             link.click();
 
             downloadIcon.className = "fa-solid fa-check text-base text-emerald-400";
-            setTimeout(() => { downloadIcon.className = "fa-solid fa-arrow-down text-base text-amber-400"; }, 1500);
+            btnDownload.classList.add('scale-110');
+            setTimeout(() => {
+                downloadIcon.className = "fa-solid fa-arrow-down text-base text-amber-400";
+                btnDownload.classList.remove('scale-110');
+            }, 1000);
         });
 
         window.addEventListener('load', initCamera);
