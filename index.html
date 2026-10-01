@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Re-Trazado WebGL</title>
-
+    
     <!-- Vinculación del Web App Manifest -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#eeeeee">
@@ -38,6 +38,7 @@
             cursor: pointer;
             box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
         }
+        /* Ancho fijo para el botón de modos */
         .btn-mode-fixed {
             width: 155px;
             min-width: 155px;
@@ -59,9 +60,9 @@
         </div>
 
         <div class="flex items-center space-x-2">
-            <!-- Botón de modos con ancho fijo aplicado -->
+            <!-- Botón de modos con ancho fijo -->
             <button id="btnShaderMode" class="btn-mode-fixed bg-black/50 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center overflow-hidden whitespace-nowrap">
-                <span id="shaderLabel" class="text-amber-400 font-bold truncate">1 ESTELAS LUZ</span>
+                <span id="shaderLabel" class="text-cyan-400 font-bold truncate">1 PROMEDIO</span>
             </button>
             <button id="btnFullscreen" class="w-9 h-9 rounded-full bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-95 transition shadow-lg" title="Pantalla Completa">
                 <i class="fa-solid fa-expand text-xs"></i>
@@ -180,7 +181,21 @@
             }
         `;
 
-        // Shader 1: Estelas de Luz
+        // Shader: Promedio
+        const fsAverage = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform float u_decay;
+            varying vec2 v_texCoord;
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                gl_FragColor = mix(accum, current, 0.12);
+            }
+        `;
+
+        // Shader: Estelas de Luz
         const fsLight = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -196,7 +211,7 @@
             }
         `;
 
-        // Shader 2: Sombras
+        // Shader: Sombras
         const fsShadow = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -212,21 +227,7 @@
             }
         `;
 
-        // Shader 3: Promedio
-        const fsAverage = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
-                gl_FragColor = mix(accum, current, 0.12);
-            }
-        `;
-
-        // Shader 4: Fantasma
+        // Shader: Fantasma
         const fsGhost = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -241,7 +242,7 @@
             }
         `;
 
-        // Shader 5: Movimiento (Diferencia)
+        // Shader: Movimiento
         const fsMotion = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -261,10 +262,11 @@
             }
         `;
 
+        // Reordenamiento: PROMEDIO figura primero como opción predeterminada
         const shaderModes = [
-            { name: '1 ESTELAS LUZ', fs: fsLight, class: 'text-amber-400 font-bold' },
-            { name: '2 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
-            { name: '3 PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
+            { name: '1 PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
+            { name: '2 ESTELAS LUZ', fs: fsLight, class: 'text-amber-400 font-bold' },
+            { name: '3 SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
             { name: '4 FANTASMA', fs: fsGhost, class: 'text-purple-400 font-bold' },
             { name: '5 MOVIMIENTO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
         ];
@@ -342,6 +344,21 @@
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         }
 
+        // Función para actualizar tamaño de canvas y buffer al rotar o cambiar tamaño
+        function handleResize() {
+            if (!video.videoWidth || !video.videoHeight) return;
+
+            const w = video.videoWidth;
+            const h = video.videoHeight;
+
+            if (canvas.width !== w || canvas.height !== h) {
+                canvas.width = w;
+                canvas.height = h;
+                gl.viewport(0, 0, w, h);
+                initFramebuffers(w, h);
+            }
+        }
+
         async function initCamera() {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
@@ -384,6 +401,8 @@
                 if (!isLivePreview) return;
 
                 if (video.readyState >= 2) {
+                    handleResize(); // Monitorea rotaciones en tiempo real
+
                     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
@@ -437,7 +456,7 @@
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
             gl.useProgram(passProgram);
-
+            
             const posLoc = gl.getAttribLocation(passProgram, "a_position");
             gl.enableVertexAttribArray(posLoc);
             gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
@@ -598,6 +617,7 @@
             }, 1000);
         });
 
+        window.addEventListener('resize', handleResize);
         window.addEventListener('load', initCamera);
     </script>
 </body>
