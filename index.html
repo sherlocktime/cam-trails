@@ -40,9 +40,9 @@
         }
         /* Ancho fijo para el botón de modos */
         .btn-mode-fixed {
-            width: 125px;
-            min-width: 125px;
-            max-width: 125px;
+            width: 105px;
+            min-width: 105px;
+            max-width: 105px;
         }
         /* Espejado horizontal en CSS/JS */
         .mirror-x {
@@ -102,15 +102,7 @@
                         <span>Frames a acumular</span>
                         <span id="frameCountValue" class="text-amber-400 font-bold font-mono">25 frames</span>
                     </div>
-                    <input type="range" id="frameSlider" min="5" max="150" value="25" class="w-full">
-                </div>
-
-                <div class="flex flex-col space-y-0.5">
-                    <div class="flex justify-between text-[11px] text-neutral-300 font-medium">
-                        <span>Desvanecimiento (Decay)</span>
-                        <span id="decayValue" class="text-amber-400 font-bold font-mono">100%</span>
-                    </div>
-                    <input type="range" id="decaySlider" min="80" max="100" value="100" class="w-full">
+                    <input type="range" id="frameSlider" min="5" max="250" value="25" class="w-full">
                 </div>
             </div>
         </div>
@@ -139,10 +131,7 @@
 
         const frameSlider = document.getElementById('frameSlider');
         const frameCountValue = document.getElementById('frameCountValue');
-        const decaySlider = document.getElementById('decaySlider');
-        const decayValue = document.getElementById('decayValue');
-
-        const btnCapture = document.getElementById('btnCapture');
+const btnCapture = document.getElementById('btnCapture');
         const shutterInner = document.getElementById('shutterInner');
         const shutterIcon = document.getElementById('shutterIcon');
         const btnReset = document.getElementById('btnReset');
@@ -167,9 +156,7 @@
         let isLivePreview = true;
         let capturedFramesCount = 0;
         let targetFrames = 25;
-        let decayVal = 1.0;
-
-        // --- SHADERS WEBGL (Límpios, sin flips dentro de GPU) ---
+// --- SHADERS WEBGL (Límpios, sin flips dentro de GPU) ---
 
         const vsSource = `
             attribute vec2 a_position;
@@ -194,11 +181,10 @@
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
+varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
                 gl_FragColor = mix(accum, current, 0.12);
             }
         `;
@@ -208,11 +194,10 @@
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
+varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
                 float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
                 float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
                 gl_FragColor = (lumaC > lumaA) ? current : accum;
@@ -224,8 +209,7 @@
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
+varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
@@ -240,8 +224,7 @@
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
+varying vec2 v_texCoord;
 
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
@@ -263,8 +246,7 @@
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_decay;
-            varying vec2 v_texCoord;
+varying vec2 v_texCoord;
 
             float colorDodge(float base, float blend) {
                 if (base >= 1.0) return 1.0;
@@ -275,7 +257,7 @@
 
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord) * u_decay;
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
 
                 vec3 dodgeColor = vec3(
                     colorDodge(current.r, accum.r),
@@ -497,7 +479,6 @@
             pingPongCount = 0;
 
             targetFrames = parseInt(frameSlider.value);
-            decayVal = parseInt(decaySlider.value) / 100;
 
             configPanel.style.opacity = '0.3';
             configPanel.style.pointerEvents = 'none';
@@ -560,8 +541,6 @@
             gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
             gl.uniform1i(gl.getUniformLocation(blendProgram, "u_accumulatedFrame"), 1);
 
-            gl.uniform1f(gl.getUniformLocation(blendProgram, "u_decay"), decayVal);
-
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -618,12 +597,7 @@
         frameSlider.addEventListener('input', (e) => {
             frameCountValue.textContent = `${e.target.value} frames`;
         });
-
-        decaySlider.addEventListener('input', (e) => {
-            decayValue.textContent = `${e.target.value}%`;
-        });
-
-        btnShaderMode.addEventListener('click', () => {
+btnShaderMode.addEventListener('click', () => {
             currentShaderIndex = (currentShaderIndex + 1) % shaderModes.length;
             const current = shaderModes[currentShaderIndex];
             shaderLabel.textContent = current.name;
