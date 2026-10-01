@@ -254,18 +254,16 @@
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
                 
-                // Calculamos la magnitud de la diferencia/movimiento entre fotogramas
+                // Calculamos la diferencia entre la imagen previa y la actual
                 vec3 diff = abs(current.rgb - accum.rgb);
-                float motion = dot(diff, vec3(0.299, 0.587, 0.114));
+                float motion = dot(diff, vec3(0.333)); // Luminancia/Luma del cambio
                 
-                // Umbral de sensibilidad para detectar movimiento (> 0.08)
-                if (motion > 0.08) {
-                    // Trazo en negro para la zona de cambio
-                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                // Si hay movimiento significativo (> 0.12), pintamos NEGRO
+                if (motion > 0.12) {
+                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); // Negro para los cambios
                 } else {
-                    // Mantiene el blanco o preserva el rastro oscuro anterior atenuado por el decay
-                    vec4 prev = mix(vec4(1.0), accum, u_decay);
-                    gl_FragColor = prev;
+                    // Fondo original
+                    gl_FragColor = current;
                 }
             }
         `;
