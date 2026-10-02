@@ -66,7 +66,7 @@
         <div class="flex items-center space-x-2">
             <!-- Botón de modos con ancho fijo -->
             <button id="btnShaderMode" class="btn-mode-fixed bg-black/50 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center overflow-hidden whitespace-nowrap">
-                <span id="shaderLabel" class="text-cyan-400 font-bold truncate">1 PROMEDIO</span>
+                <span id="shaderLabel" class="text-white-400 font-bold truncate">1 PROMEDIO</span>
             </button>
 
             <!-- Botón para alternar Resolución 720p / 1080p -->
@@ -241,34 +241,6 @@ varying vec2 v_texCoord;
             }
         `;
 
-        // Shader: Color Dodge (Sobreexposición Neón / Retro-Wave)
-        const fsColorDodge = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-varying vec2 v_texCoord;
-
-            float colorDodge(float base, float blend) {
-                if (base >= 1.0) return 1.0;
-                float denominator = 1.0 - blend;
-                if (denominator <= 0.001) return 1.0;
-                return min(1.0, base / denominator);
-            }
-
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-
-                vec3 dodgeColor = vec3(
-                    colorDodge(current.r, accum.r),
-                    colorDodge(current.g, accum.g),
-                    colorDodge(current.b, accum.b)
-                );
-
-                gl_FragColor = vec4(mix(accum.rgb, dodgeColor, 0.05), 1.0);
-            }
-        `;
-
         // Shader: Overlay
         const fsOverlay = `
             precision mediump float;
@@ -301,44 +273,12 @@ varying vec2 v_texCoord;
             }
         `;
 
-        // Shader: Hard Light
-        const fsHardLight = `
-            precision mediump float;
-
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-
-            varying vec2 v_texCoord;
-
-            float hardLight(float base, float blend) {
-                return blend < 0.5
-                    ? 2.0 * base * blend
-                    : 1.0 - 2.0 * (1.0 - base) * (1.0 - blend);
-            }
-
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-
-                vec3 hardLightColor = vec3(
-                    hardLight(current.r, accum.r),
-                    hardLight(current.g, accum.g),
-                    hardLight(current.b, accum.b)
-                );
-
-                gl_FragColor = vec4(
-                    mix(accum.rgb, overlayColor, 0.05),
-                    1.0
-                );
-            }
-        `;
-
         const shaderModes = [
-            { name: '1.PROMEDIO', fs: fsAverage, class: 'text-cyan-400 font-bold' },
+            { name: '1.PROMEDIO', fs: fsAverage, class: 'text-white-400 font-bold' },
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
-            { name: '4.COLOR', fs: fsHardLight, class: 'text-purple-400 font-bold' },
-            { name: '5.CONTORNO', fs: fsMotion, class: 'text-emerald-400 font-bold' }
+            { name: '4.COLORES', fs: fsOverlay, class: 'text-purple-400 font-bold' },
+            { name: '5.CONTORNO', fs: fsMotion, class: 'text-cyan-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
