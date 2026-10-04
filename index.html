@@ -66,7 +66,7 @@
         <div class="flex items-center space-x-2">
             <!-- Botón de modos con ancho fijo -->
             <button id="btnShaderMode" class="btn-mode-fixed bg-black/50 backdrop-blur-md border border-white/10 px-2 py-1.5 rounded-full text-xs font-mono font-semibold shadow-lg active:scale-95 transition flex items-center justify-center overflow-hidden whitespace-nowrap">
-                <span id="shaderLabel" class="text-white-400 font-bold truncate">1 PROMEDIO</span>
+                <span id="shaderLabel" class="text-white-400 font-bold truncate">1.PROMEDIO</span>
             </button>
 
             <!-- Botón para alternar Resolución 720p / 1080p -->
@@ -131,7 +131,7 @@
 
         const frameSlider = document.getElementById('frameSlider');
         const frameCountValue = document.getElementById('frameCountValue');
-const btnCapture = document.getElementById('btnCapture');
+        const btnCapture = document.getElementById('btnCapture');
         const shutterInner = document.getElementById('shutterInner');
         const shutterIcon = document.getElementById('shutterIcon');
         const btnReset = document.getElementById('btnReset');
@@ -181,7 +181,7 @@ const btnCapture = document.getElementById('btnCapture');
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-varying vec2 v_texCoord;
+            varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
@@ -194,7 +194,7 @@ varying vec2 v_texCoord;
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-varying vec2 v_texCoord;
+            varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
@@ -209,7 +209,7 @@ varying vec2 v_texCoord;
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-varying vec2 v_texCoord;
+            varying vec2 v_texCoord;
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
@@ -224,7 +224,7 @@ varying vec2 v_texCoord;
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-varying vec2 v_texCoord;
+            varying vec2 v_texCoord;
 
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
@@ -273,12 +273,41 @@ varying vec2 v_texCoord;
             }
         `;
 
+        const fsChromaticTrail = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform vec2 u_resolution; // Opcional si querés offsets dinámicos
+            varying vec2 v_texCoord;
+
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+
+                // Desplazamiento leve por canal para generar aberración cromática en la estela
+                vec2 rCoord = v_texCoord + vec2( 0.002,  0.0);
+                vec2 gCoord = v_texCoord + vec2(-0.001,  0.001);
+                vec2 bCoord = v_texCoord + vec2( 0.0,   -0.002);
+
+                float accumR = texture2D(u_accumulatedFrame, rCoord).r;
+                float accumG = texture2D(u_accumulatedFrame, gCoord).g;
+                float accumB = texture2D(u_accumulatedFrame, bCoord).b;
+
+                vec3 accumulatedColor = vec3(accumR, accumG, accumB);
+
+                // Mezclamos el frame actual con las estelas desfasadas que decaen
+                vec3 result = max(current.rgb, accumulatedColor * 0.92);
+
+                gl_FragColor = vec4(result, 1.0);
+            }
+        `;
+
         const shaderModes = [
             { name: '1.PROMEDIO', fs: fsAverage, class: 'text-white-400 font-bold' },
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
             { name: '4.COLORES', fs: fsOverlay, class: 'text-purple-400 font-bold' },
-            { name: '5.CONTORNO', fs: fsMotion, class: 'text-cyan-400 font-bold' }
+            { name: '5.CONTORNO', fs: fsChromaticTrail, class: 'text-cyan-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
