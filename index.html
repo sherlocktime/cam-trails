@@ -219,6 +219,8 @@
             }
         `;
 
+
+
         const fsLightShadow = `
         precision mediump float;
 
@@ -227,40 +229,54 @@
         varying vec2 v_texCoord;
 
         void main() {
-            vec3 current = texture2D(u_currentFrame, v_texCoord).rgb;
-            vec3 accum   = texture2D(u_accumulatedFrame, v_texCoord).rgb;
+            vec3 current = texture2D(
+                u_currentFrame,
+                v_texCoord
+            ).rgb;
 
-            // Acumulación lenta
-            vec3 result = max(current, accum * 0.80);
+            // Luminancia
+            float lum = dot(
+                current,
+                vec3(0.299, 0.587, 0.114)
+            );
 
-            // Radio de expansión
+            // Extremos: casi negro O casi blanco
+            float black = 1.0 - smoothstep(0.005, 0.10, lum);
+            float white = smoothstep(0.90, 0.995, lum);
+
+            // OR
+            float extreme = max(black, white);
+
+            // Acumulado
+            float accum = texture2D(
+                u_accumulatedFrame,
+                v_texCoord
+            ).r;
+
+            accum = max(
+                extreme,
+                accum * 0.85
+            );
+
+            // Expandir alrededor
             vec2 d = vec2(0.004);
 
-            // Vecinos
-            vec3 n = (
-                texture2D(u_accumulatedFrame, v_texCoord + vec2( d.x, 0.0)).rgb +
-                texture2D(u_accumulatedFrame, v_texCoord + vec2(-d.x, 0.0)).rgb +
-                texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0,  d.y)).rgb +
-                texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0, -d.y)).rgb
+            float around = (
+                texture2D(u_accumulatedFrame, v_texCoord + vec2( d.x, 0.0)).r +
+                texture2D(u_accumulatedFrame, v_texCoord + vec2(-d.x, 0.0)).r +
+                texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0,  d.y)).r +
+                texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0, -d.y)).r
             ) * 0.25;
 
-            float lum = dot(n, vec3(0.299, 0.587, 0.114));
+            accum = max(accum, around * 0.85);
 
-            // Casi blanco -> expande luz
-            float light = smoothstep(0.90, 0.995, lum);
-
-            // Casi negro -> expande sombra
-            float shadow = 1.0 - smoothstep(0.005, 0.10, lum);
-
-            // Luz
-            result += n * light * 0.45;
-
-            // Sombra
-            result *= 1.0 - shadow * 0.35;
+            // Salida negra donde hay acumulación
+            vec3 result = current * (1.0 - accum);
 
             gl_FragColor = vec4(result, 1.0);
         }
         `;
+
 
 
 
