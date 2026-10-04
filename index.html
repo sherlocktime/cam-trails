@@ -241,46 +241,30 @@
             }
         `;
 
-        const fsMotionSwitch = `
+        const fsRadialZoom = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-            uniform float u_modeSwitch; // Recibe 0.0 o 1.0
             varying vec2 v_texCoord;
 
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
+                
+                // Centrar coordenadas UV de 0.0 a 1.0 a un rango -0.5 a 0.5
+                vec2 centeredCoord = v_texCoord - 0.5;
+                
+                // Aplicar un zoom sutil hacia el centro (ej: 0.99 de escala)
+                vec2 zoomedCoord = centeredCoord * 0.985 + 0.5;
+                
+                vec4 accum = texture2D(u_accumulatedFrame, zoomedCoord);
 
-                // Detectar movimiento comparando con el acumulado o frame anterior
-                vec3 diff = abs(current.rgb - accum.rgb);
-                float motion = dot(diff, vec3(0.299, 0.587, 0.114));
+                // Se prioriza la luz pero con el feedback escalado
+                vec3 result = max(current.rgb, accum.rgb * 0.95);
 
-                vec4 finalColor;
-
-                if (u_modeSwitch < 0.5) {
-                    // --- MODO 0: Contorno negro (Lógica original mejorada) ---
-                    if (motion > 0.15) {
-                        finalColor = vec4(0.0, 0.0, 0.0, 1.0); // Pinta de negro el movimiento
-                    } else {
-                        // Mezclamos con el acumulado pero dejando respirar el video actual 
-                        // para que el negro no sature toda la pantalla para siempre
-                        finalColor = mix(current, accum, 0.7); 
-                    }
-                } else {
-                    // --- MODO 1: Reemplazar lo que no es negro por blanco ---
-                    float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
-                    
-                    if (lumaC > 0.1) {
-                        finalColor = vec4(1.0, 1.0, 1.0, 1.0); // Blanco si hay contenido
-                    } else {
-                        finalColor = vec4(0.0, 0.0, 0.0, 1.0); // Negro si está oscuro
-                    }
-                }
-
-                gl_FragColor = finalColor;
+                gl_FragColor = vec4(result, 1.0);
             }
         `;
+
 
         // Shader: Overlay
         const fsOverlay = `
@@ -319,7 +303,7 @@
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
             { name: '4.COLORES', fs: fsOverlay, class: 'text-purple-400 font-bold' },
-            { name: '5.CONTORNO', fs: fsMotionSwitch, class: 'text-cyan-400 font-bold' }
+            { name: '5.CONTORNO', fs: fsRadialZoom, class: 'text-cyan-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
@@ -585,14 +569,6 @@
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
             gl.uniform1i(gl.getUniformLocation(blendProgram, "u_accumulatedFrame"), 1);
-
-
-            // Dentro de processFrame(), antes de gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            const switchLoc = gl.getUniformLocation(blendProgram, "u_modeSwitch");
-            // Ejemplo: Si querés que los primeros 10 frames usen el modo 0 y el resto el modo 1:
-            let switchVal = (capturedFramesCount > 10) ? 1.0 : 0.0;
-            gl.uniform1f(switchLoc, switchVal);
-
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
