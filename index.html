@@ -219,7 +219,7 @@
             }
         `;
 
-// Shader: Radial Zoom + Accumulated Desaturation
+        // Shader: Radial Zoom
         const fsRadialZoom = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -228,25 +228,13 @@
 
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-
                 vec2 centeredCoord = v_texCoord - 0.5;
                 vec2 zoomedCoord = centeredCoord * 0.985 + 0.5;
-
                 vec4 accum = texture2D(u_accumulatedFrame, zoomedCoord);
-
-                // Desaturar el frame acumulado
-                float gray = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
-
-                // Cuánto se desatura cada generación acumulada
-                accum.rgb = mix(accum.rgb, vec3(gray), 0.08);
-
-                // Combinar frame actual + acumulado
                 vec3 result = max(current.rgb, accum.rgb * 0.95);
-
                 gl_FragColor = vec4(result, 1.0);
             }
         `;
-
 
         // Shader: Overlay
         const fsOverlay = `
