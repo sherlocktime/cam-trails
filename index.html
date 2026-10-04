@@ -219,22 +219,59 @@
             }
         `;
 
-        // Shader: Radial Zoom
+        // Shader: Radial Zoom + Bloom
         const fsRadialZoom = `
             precision mediump float;
+
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
             varying vec2 v_texCoord;
 
             void main() {
+                // Frame actual
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
+
+                // Zoom radial
                 vec2 centeredCoord = v_texCoord - 0.5;
                 vec2 zoomedCoord = centeredCoord * 0.975 + 0.5;
+
+                // Frame acumulado
                 vec4 accum = texture2D(u_accumulatedFrame, zoomedCoord);
+
+                // Acumulación original
                 vec3 result = max(current.rgb, accum.rgb * 0.90);
+
+                // --------------------------------
+                // GLOW / BLOOM
+                // --------------------------------
+
+                vec2 texel = vec2(0.002);
+
+                vec3 glow = vec3(0.0);
+
+                glow += texture2D(u_accumulatedFrame, zoomedCoord + vec2( texel.x, 0.0)).rgb;
+                glow += texture2D(u_accumulatedFrame, zoomedCoord + vec2(-texel.x, 0.0)).rgb;
+                glow += texture2D(u_accumulatedFrame, zoomedCoord + vec2(0.0,  texel.y)).rgb;
+                glow += texture2D(u_accumulatedFrame, zoomedCoord + vec2(0.0, -texel.y)).rgb;
+
+                glow *= 0.25;
+
+                // Solo dejamos pasar las partes luminosas
+                float brightness = dot(
+                    glow,
+                    vec3(0.299, 0.587, 0.114)
+                );
+
+                float mask = smoothstep(0.4, 1.0, brightness);
+
+                result += glow * mask * 0.35;
+
+                // --------------------------------
+
                 gl_FragColor = vec4(result, 1.0);
             }
         `;
+
 
         // Shader: Overlay
         const fsOverlay = `
