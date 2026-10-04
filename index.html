@@ -220,6 +220,7 @@
         `;
 
         // Shader: Contorno
+        // Shader: Contorno Optimizado (No se satura con el tiempo)
         const fsMotion = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -230,13 +231,18 @@
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
 
+                // Diferencia entre el frame actual y la acumulación inmediata
                 vec3 diff = abs(current.rgb - accum.rgb);
-                float motion = dot(diff, vec3(0.333));
+                float motion = dot(diff, vec3(0.299, 0.587, 0.114));
 
-                if (motion > 0.15) {
-                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                // Si hay movimiento detectado, pintamos el rastro/contorno; 
+                // de lo contrario, dejamos que el fondo respire con el frame actual pero atenuado
+                if (motion > 0.12) {
+                    // Contorno oscuro o de color según el movimiento
+                    gl_FragColor = vec4(vec3(0.0), 1.0);
                 } else {
-                    gl_FragColor = current;
+                    // Hacemos que el acumulado decaiga rápido para que no ensanche el trazo
+                    gl_FragColor = mix(current, accum, 0.6); 
                 }
             }
         `;
@@ -273,41 +279,12 @@
             }
         `;
 
-        const fsChromaticTrail = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            uniform vec2 u_resolution; // Opcional si querés offsets dinámicos
-            varying vec2 v_texCoord;
-
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-
-                // Desplazamiento leve por canal para generar aberración cromática en la estela
-                vec2 rCoord = v_texCoord + vec2( 0.002,  0.0);
-                vec2 gCoord = v_texCoord + vec2(-0.001,  0.001);
-                vec2 bCoord = v_texCoord + vec2( 0.0,   -0.002);
-
-                float accumR = texture2D(u_accumulatedFrame, rCoord).r;
-                float accumG = texture2D(u_accumulatedFrame, gCoord).g;
-                float accumB = texture2D(u_accumulatedFrame, bCoord).b;
-
-                vec3 accumulatedColor = vec3(accumR, accumG, accumB);
-
-                // Mezclamos el frame actual con las estelas desfasadas que decaen
-                vec3 result = max(current.rgb, accumulatedColor * 0.92);
-
-                gl_FragColor = vec4(result, 1.0);
-            }
-        `;
-
         const shaderModes = [
             { name: '1.PROMEDIO', fs: fsAverage, class: 'text-white-400 font-bold' },
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
             { name: '4.COLORES', fs: fsOverlay, class: 'text-purple-400 font-bold' },
-            { name: '5.CONTORNO', fs: fsChromaticTrail, class: 'text-cyan-400 font-bold' }
+            { name: '5.CONTORNO', fs: fsMotion, class: 'text-cyan-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
