@@ -221,55 +221,63 @@
 
 
 
-const fsExtremeExpand = `
-precision mediump float;
 
-uniform sampler2D u_currentFrame;
-uniform sampler2D u_accumulatedFrame;
-varying vec2 v_texCoord;
+        const fsExtremeExpand = `
+        precision mediump float;
 
-void main() {
-    vec3 current = texture2D(u_currentFrame, v_texCoord).rgb;
+        uniform sampler2D u_currentFrame;
+        uniform sampler2D u_accumulatedFrame;
+        varying vec2 v_texCoord;
 
-    float lum = dot(current, vec3(0.299, 0.587, 0.114));
+        void main() {
 
-    // Negro o blanco
-    float dark  = 1.0 - smoothstep(0.02, 0.10, lum);
-    float light = smoothstep(0.90, 0.98, lum);
+            // Imagen actual
+            vec3 current = texture2D(
+                u_currentFrame,
+                v_texCoord
+            ).rgb;
 
-    // OR
-    float extreme = max(dark, light);
+            float lum = dot(
+                current,
+                vec3(0.299, 0.587, 0.114)
+            );
 
-    // Acumulado permanente
-    float accum = texture2D(
-        u_accumulatedFrame,
-        v_texCoord
-    ).r;
+            // Detectar extremos
+            float dark  = 1.0 - smoothstep(0.02, 0.10, lum);
+            float light = smoothstep(0.90, 0.98, lum);
 
-    accum = max(accum, extreme);
+            // Negro OR blanco
+            float mask = max(dark, light);
 
-    // Expandir
-    vec2 d = vec2(0.004);
+            // Máscara acumulada
+            float accum = texture2D(
+                u_accumulatedFrame,
+                v_texCoord
+            ).r;
 
-    float around = max(
-        max(
-            texture2D(u_accumulatedFrame, v_texCoord + vec2( d.x, 0.0)).r,
-            texture2D(u_accumulatedFrame, v_texCoord + vec2(-d.x, 0.0)).r
-        ),
-        max(
-            texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0,  d.y)).r,
-            texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0, -d.y)).r
-        )
-    );
+            // Crece, nunca decrece
+            accum = max(accum, mask);
 
-    accum = max(accum, around);
+            // Expansión
+            vec2 d = vec2(0.004);
 
-    // Superponer como negro
-    vec3 result = mix(current, vec3(0.0), accum);
+            float expanded = max(
+                max(
+                    texture2D(u_accumulatedFrame, v_texCoord + vec2( d.x, 0.0)).r,
+                    texture2D(u_accumulatedFrame, v_texCoord + vec2(-d.x, 0.0)).r
+                ),
+                max(
+                    texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0,  d.y)).r,
+                    texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0, -d.y)).r
+                )
+            );
 
-    gl_FragColor = vec4(result, 1.0);
-}
-`;
+            accum = max(accum, expanded);
+
+            // El framebuffer acumulado es SOLO la máscara
+            gl_FragColor = vec4(accum, 0.0, 0.0, 1.0);
+        }
+        `;
 
 
 
