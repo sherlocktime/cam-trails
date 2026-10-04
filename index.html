@@ -263,9 +263,9 @@
                 vec2 c = v_texCoord - 0.5;
                 float d = length(c);
 
-                vec2 rCoord = c * (0.99 - d * 0.015) + 0.5;
-                vec2 gCoord = c * 0.99 + 0.5;
-                vec2 bCoord = c * (0.99 + d * 0.015) + 0.5;
+                vec2 rCoord = c * (0.975 - d * 0.015) + 0.5;
+                vec2 gCoord = c * 0.975 + 0.5;
+                vec2 bCoord = c * (0.975 + d * 0.015) + 0.5;
 
                 vec3 accum = vec3(
                     texture2D(u_accumulatedFrame, rCoord).r,
