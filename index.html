@@ -229,9 +229,9 @@
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec2 centeredCoord = v_texCoord - 0.5;
-                vec2 zoomedCoord = centeredCoord * 0.985 + 0.5;
+                vec2 zoomedCoord = centeredCoord * 0.975 + 0.5;
                 vec4 accum = texture2D(u_accumulatedFrame, zoomedCoord);
-                vec3 result = max(current.rgb, accum.rgb * 0.95);
+                vec3 result = max(current.rgb, accum.rgb * 0.90);
                 gl_FragColor = vec4(result, 1.0);
             }
         `;
@@ -268,35 +268,12 @@
             }
         `;
 
-        const fsLens = `
-            precision mediump float;
-
-            uniform sampler2D u_currentFrame;
-            varying vec2 v_texCoord;
-
-            void main() {
-                // Intensidad de la distorsión
-                float distortion = 0.65;
-                // Coordenadas centradas
-                vec2 uv = v_texCoord - 0.5;
-                // Distancia desde el centro
-                float r = length(uv);
-                // Distorsión radial progresiva
-                float factor = 1.0 + distortion * r * r;
-                // Aplicar deformación
-                vec2 distortedUV = uv * factor + 0.5;
-                // Evitar problemas fuera de la textura
-                distortedUV = clamp(distortedUV, 0.0, 1.0);
-                gl_FragColor = texture2D(u_currentFrame, distortedUV);
-            }
-        `;
-
         const shaderModes = [
             { name: '1.PROMEDIO', fs: fsAverage, class: 'text-white-400 font-bold' },
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
             { name: '4.COLORES', fs: fsOverlay, class: 'text-purple-400 font-bold' },
-            { name: '5.PRUEBAS', fs: fsLens, class: 'text-cyan-400 font-bold' }
+            { name: '5.ZOOM', fs: fsRadialZoom, class: 'text-cyan-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
