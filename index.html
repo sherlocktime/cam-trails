@@ -268,46 +268,35 @@
             }
         `;
 
-        const fsMotionColor = `
+        const fsLens = `
             precision mediump float;
 
             uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-
             varying vec2 v_texCoord;
 
             void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-
-                float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
-                float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
-
-                float diff = abs(lumaC - lumaA);
-
-                // Umbral de movimiento
-                float threshold = 0.05;
-
-                // 0 = gris, 1 = color
-                float motion = step(threshold, diff);
-
-                // Imagen en escala de grises
-                vec3 gray = vec3(lumaC);
-
-                // Movimiento -> color original
-                vec3 result = mix(gray, current.rgb, motion);
-
-                gl_FragColor = vec4(result, 1.0);
+                // Intensidad de la distorsión
+                float distortion = 0.65;
+                // Coordenadas centradas
+                vec2 uv = v_texCoord - 0.5;
+                // Distancia desde el centro
+                float r = length(uv);
+                // Distorsión radial progresiva
+                float factor = 1.0 + distortion * r * r;
+                // Aplicar deformación
+                vec2 distortedUV = uv * factor + 0.5;
+                // Evitar problemas fuera de la textura
+                distortedUV = clamp(distortedUV, 0.0, 1.0);
+                gl_FragColor = texture2D(u_currentFrame, distortedUV);
             }
         `;
-
 
         const shaderModes = [
             { name: '1.PROMEDIO', fs: fsAverage, class: 'text-white-400 font-bold' },
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
             { name: '4.COLORES', fs: fsOverlay, class: 'text-purple-400 font-bold' },
-            { name: '5.PRUEBAS', fs: fsMotionColor, class: 'text-cyan-400 font-bold' }
+            { name: '5.PRUEBAS', fs: fsLens, class: 'text-cyan-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
