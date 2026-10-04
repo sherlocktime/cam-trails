@@ -241,7 +241,7 @@
             }
         `;
 
-        // Shader: Psico Zoom
+        // Shader: Zoom
         const fsRadialZoom = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
@@ -251,21 +251,24 @@
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 
+                // Centrar coordenadas UV (-0.5 a 0.5)
                 vec2 uv = v_texCoord - 0.5;
                 
-                // Desplazamiento leve por canal al hacer zoom
-                vec2 uvR = uv * 0.982 + 0.5;
-                vec2 uvG = uv * 0.985 + 0.5;
-                vec2 uvB = uv * 0.988 + 0.5;
-
-                float r = texture2D(u_accumulatedFrame, uvR).r;
-                float g = texture2D(u_accumulatedFrame, uvG).g;
-                float b = texture2D(u_accumulatedFrame, uvB).b;
+                // Ángulo de rotación sutil (cambialo para más o menos giro)
+                float angle = 0.03; 
+                float c = cos(angle), s = sin(angle);
+                mat2 rot = mat2(c, -s, s, c);
                 
-                vec3 accumRGB = vec3(r, g, b);
+                // Aplicar rotación y luego un zoom leve (ej: 0.985)
+                uv = rot * uv * 0.985;
+                
+                // Volver a las coordenadas originales (0.0 a 1.0)
+                vec2 zoomedCoord = uv + 0.5;
+                
+                vec4 accum = texture2D(u_accumulatedFrame, zoomedCoord);
 
-                // Mezclar el frame actual con el túnel cromático
-                vec3 result = max(current.rgb, accumRGB * 0.93);
+                // Mezclar priorizando la luz pero con el efecto de vórtice
+                vec3 result = max(current.rgb, accum.rgb * 0.94);
 
                 gl_FragColor = vec4(result, 1.0);
             }
