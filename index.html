@@ -219,103 +219,49 @@
             }
         `;
 
-        // Shader: Light Expansion
-        const fsLightExpansion = `
-            precision mediump float;
+        const fsLightShadow = `
+        precision mediump float;
 
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            varying vec2 v_texCoord;
+        uniform sampler2D u_currentFrame;
+        uniform sampler2D u_accumulatedFrame;
+        varying vec2 v_texCoord;
 
-            void main() {
+        void main() {
+            vec3 current = texture2D(u_currentFrame, v_texCoord).rgb;
+            vec3 accum   = texture2D(u_accumulatedFrame, v_texCoord).rgb;
 
-                // --------------------------------
-                // FRAME ACTUAL
-                // --------------------------------
+            // Acumulación lenta
+            vec3 result = max(current, accum * 0.80);
 
-                vec3 current = texture2D(
-                    u_currentFrame,
-                    v_texCoord
-                ).rgb;
+            // Radio de expansión
+            vec2 d = vec2(0.004);
 
+            // Vecinos
+            vec3 n = (
+                texture2D(u_accumulatedFrame, v_texCoord + vec2( d.x, 0.0)).rgb +
+                texture2D(u_accumulatedFrame, v_texCoord + vec2(-d.x, 0.0)).rgb +
+                texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0,  d.y)).rgb +
+                texture2D(u_accumulatedFrame, v_texCoord + vec2(0.0, -d.y)).rgb
+            ) * 0.25;
 
-                // --------------------------------
-                // FRAME ACUMULADO
-                // --------------------------------
+            float lum = dot(n, vec3(0.299, 0.587, 0.114));
 
-                vec3 accum = texture2D(
-                    u_accumulatedFrame,
-                    v_texCoord
-                ).rgb;
+            // Casi blanco -> expande luz
+            float light = smoothstep(0.90, 0.995, lum);
 
+            // Casi negro -> expande sombra
+            float shadow = 1.0 - smoothstep(0.005, 0.10, lum);
 
-                // --------------------------------
-                // BASE
-                // --------------------------------
+            // Luz
+            result += n * light * 0.45;
 
-                vec3 result = max(
-                    current,
-                    accum * 0.90
-                );
+            // Sombra
+            result *= 1.0 - shadow * 0.35;
 
-
-                // --------------------------------
-                // EXPANSIÓN DE LUZ
-                // --------------------------------
-
-                vec2 texel = vec2(0.004);
-
-                vec3 glow = vec3(0.0);
-
-                glow += texture2D(
-                    u_accumulatedFrame,
-                    v_texCoord + vec2(texel.x, 0.0)
-                ).rgb;
-
-                glow += texture2D(
-                    u_accumulatedFrame,
-                    v_texCoord - vec2(texel.x, 0.0)
-                ).rgb;
-
-                glow += texture2D(
-                    u_accumulatedFrame,
-                    v_texCoord + vec2(0.0, texel.y)
-                ).rgb;
-
-                glow += texture2D(
-                    u_accumulatedFrame,
-                    v_texCoord - vec2(0.0, texel.y)
-                ).rgb;
-
-                glow *= 0.25;
-
-
-                // --------------------------------
-                // DETECTAR LUZ
-                // --------------------------------
-
-                float brightness = dot(
-                    glow,
-                    vec3(0.299, 0.587, 0.114)
-                );
-
-                float mask = smoothstep(
-                    0.35,
-                    0.9,
-                    brightness
-                );
-
-
-                // --------------------------------
-                // SUMAR EXPANSIÓN
-                // --------------------------------
-
-                result += glow * mask * 0.5;
-
-
-                gl_FragColor = vec4(result, 1.0);
-            }
+            gl_FragColor = vec4(result, 1.0);
+        }
         `;
+
 
 
 
