@@ -219,34 +219,6 @@
             }
         `;
 
-        // Shader: Radial Zoom RGB
-        const fsRadialZoom = `
-            precision mediump float;
-            uniform sampler2D u_currentFrame;
-            uniform sampler2D u_accumulatedFrame;
-            varying vec2 v_texCoord;
-
-            void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec2 c = v_texCoord - 0.5;
-                float d = length(c);
-
-                vec2 rCoord = c * (0.985 - d * 0.015) + 0.5;
-                vec2 gCoord = c * 0.985 + 0.5;
-                vec2 bCoord = c * (0.985 + d * 0.015) + 0.5;
-
-                vec3 accum = vec3(
-                    texture2D(u_accumulatedFrame, rCoord).r,
-                    texture2D(u_accumulatedFrame, gCoord).g,
-                    texture2D(u_accumulatedFrame, bCoord).b
-                );
-
-                vec3 result = max(current.rgb, accum * 0.95);
-                gl_FragColor = vec4(result, 1.0);
-            }
-        `;
-
-
         // Shader: Overlay
         const fsOverlay = `
             precision mediump float;
@@ -279,12 +251,40 @@
             }
         `;
 
+        // Shader: Radial Zoom RGB
+        const fsRadialZoom = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            varying vec2 v_texCoord;
+
+            void main() {
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec2 c = v_texCoord - 0.5;
+                float d = length(c);
+
+                vec2 rCoord = c * (0.99 - d * 0.015) + 0.5;
+                vec2 gCoord = c * 0.99 + 0.5;
+                vec2 bCoord = c * (0.99 + d * 0.015) + 0.5;
+
+                vec3 accum = vec3(
+                    texture2D(u_accumulatedFrame, rCoord).r,
+                    texture2D(u_accumulatedFrame, gCoord).g,
+                    texture2D(u_accumulatedFrame, bCoord).b
+                );
+
+                vec3 result = max(current.rgb, accum * 0.95);
+                gl_FragColor = vec4(result, 1.0);
+            }
+        `;
+
+
         const shaderModes = [
             { name: '1.PROMEDIO', fs: fsAverage, class: 'text-white-400 font-bold' },
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
             { name: '4.COLORES', fs: fsOverlay, class: 'text-purple-400 font-bold' },
-            { name: '5.RADIAL', fs: fsRadialZoom, class: 'text-cyan-400 font-bold' }
+            { name: '5.IRRADIAR', fs: fsRadialZoom, class: 'text-cyan-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
