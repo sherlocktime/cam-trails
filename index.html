@@ -206,7 +206,7 @@
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
                 
                 // Suma acumulativa con factor de exposición
-                vec3 accumulated = accum.rgb + current.rgb * 0.05;
+                vec3 accumulated = accum.rgb + current.rgb * 0.25;
                 
                 // Tone mapping para comprimir rango dinámico
                 vec3 mapped = reinhard(accumulated);
