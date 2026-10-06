@@ -196,28 +196,27 @@
             uniform sampler2D u_accumulatedFrame;
             varying vec2 v_texCoord;
             
+            // Reinhard tone mapping
+            vec3 reinhard(vec3 color) {
+                return color / (color + vec3(1.0));
+            }
+            
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
                 
-                // Operar por canal independiente
-                vec3 maxRgb = max(current.rgb, accum.rgb);
+                // Suma acumulativa con factor de exposición
+                vec3 accumulated = accum.rgb + current.rgb * 0.05;
                 
-                // Calcular saturación del frame actual
-                float maxVal = max(max(current.r, max(current.g, current.b)), 0.001);
-                float minVal = min(min(current.r, min(current.g, current.b)), maxVal);
-                float saturation = (maxVal - minVal) / maxVal;
+                // Tone mapping para comprimir rango dinámico
+                vec3 mapped = reinhard(accumulated);
                 
-                // Refuerzo sutil de saturación para luces
-                vec3 saturated = maxRgb * (1.0 + saturation * 0.3);
+                // Pequeña boost de contraste
+                mapped = pow(mapped, vec3(1.1));
                 
-                // Clamp suave para evitar quema
-                vec3 clamped = min(saturated, vec3(1.0));
-                
-                gl_FragColor = vec4(clamped, 1.0);
+                gl_FragColor = vec4(mapped, 1.0);
             }
         `;
-
 
         // Shader: Sombras
         const fsShadow = `
