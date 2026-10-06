@@ -203,9 +203,9 @@
 
                 vec3 result;
 
-                result.r = max(current.r, accum.r * 0.95);
-                result.g = max(current.g, accum.g * 0.95);
-                result.b = max(current.b, accum.b * 0.95);
+                result.r = max(current.r, accum.r * 0.975);
+                result.g = max(current.g, accum.g * 0.975);
+                result.b = max(current.b, accum.b * 0.975);
 
                 gl_FragColor = vec4(result, 1.0);
             }
