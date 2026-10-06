@@ -195,22 +195,26 @@
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
             varying vec2 v_texCoord;
-
+            
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-
-                // Realce de las luces del frame actual
-                current.rgb = pow(current.rgb, vec3(0.7));
-
-                // Acumulación independiente por canal
-                vec3 result;
-
-                result.r = max(current.r, accum.r);
-                result.g = max(current.g, accum.g);
-                result.b = max(current.b, accum.b);
-
-                gl_FragColor = vec4(result, current.a);
+                
+                // Operar por canal independiente
+                vec3 maxRgb = max(current.rgb, accum.rgb);
+                
+                // Calcular saturación del frame actual
+                float maxVal = max(max(current.r, max(current.g, current.b)), 0.001);
+                float minVal = min(min(current.r, min(current.g, current.b)), maxVal);
+                float saturation = (maxVal - minVal) / maxVal;
+                
+                // Refuerzo sutil de saturación para luces
+                vec3 saturated = maxRgb * (1.0 + saturation * 0.3);
+                
+                // Clamp suave para evitar quema
+                vec3 clamped = min(saturated, vec3(1.0));
+                
+                gl_FragColor = vec4(clamped, 1.0);
             }
         `;
 
