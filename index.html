@@ -189,25 +189,24 @@
             }
         `;
 
-        // Shader: Estelas por canal
+        // Shader: Estelas
         const fsLight = `
             precision mediump float;
-
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
             varying vec2 v_texCoord;
 
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum   = texture2D(u_accumulatedFrame, v_texCoord);
+                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
 
                 vec3 result;
 
-                result.r = max(current.r, accum.r * 0.975);
-                result.g = max(current.g, accum.g * 0.975);
-                result.b = max(current.b, accum.b * 0.975);
+                result.r = max(current.r, accum.r);
+                result.g = max(current.g, accum.g);
+                result.b = max(current.b, accum.b);
 
-                gl_FragColor = vec4(result, 1.0);
+                gl_FragColor = vec4(result, current.a);
             }
         `;
 
