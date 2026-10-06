@@ -195,26 +195,18 @@
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
             varying vec2 v_texCoord;
-            
-            // Reinhard tone mapping
-            vec3 reinhard(vec3 color) {
-                return color / (color + vec3(1.0));
-            }
-            
+
             void main() {
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-                
-                // Suma acumulativa con factor de exposición
-                vec3 accumulated = accum.rgb + current.rgb * 0.25;
-                
-                // Tone mapping para comprimir rango dinámico
-                vec3 mapped = reinhard(accumulated);
-                
-                // Pequeña boost de contraste
-                mapped = pow(mapped, vec3(1.1));
-                
-                gl_FragColor = vec4(mapped, 1.0);
+
+                vec3 result;
+
+                result.r = max(current.r, accum.r);
+                result.g = max(current.g, accum.g);
+                result.b = max(current.b, accum.b);
+
+                gl_FragColor = vec4(result, current.a);
             }
         `;
 
