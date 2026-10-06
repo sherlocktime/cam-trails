@@ -206,9 +206,9 @@
                 // Acumulación independiente por canal
                 vec3 result;
 
-                result.r = max(current.r, accum.r * 0.99);
-                result.g = max(current.g, accum.g * 0.99);
-                result.b = max(current.b, accum.b * 0.99);
+                result.r = max(current.r, accum.r);
+                result.g = max(current.g, accum.g);
+                result.b = max(current.b, accum.b);
 
                 gl_FragColor = vec4(result, current.a);
             }
