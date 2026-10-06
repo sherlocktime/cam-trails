@@ -211,17 +211,17 @@
         `;
 
         // Shader: Estelas
-        const fsLight = `
+        const fsLightRGB = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
             varying vec2 v_texCoord;
+
             void main() {
-                vec4 current = texture2D(u_currentFrame, v_texCoord);
-                vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
-                float lumaC = dot(current.rgb, vec3(0.299, 0.587, 0.114));
-                float lumaA = dot(accum.rgb, vec3(0.299, 0.587, 0.114));
-                gl_FragColor = (lumaC > lumaA) ? current : accum;
+                vec3 current = texture2D(u_currentFrame, v_texCoord).rgb;
+                vec3 accum   = texture2D(u_accumulatedFrame, v_texCoord).rgb;
+
+                gl_FragColor = vec4(max(current, accum), 1.0);
             }
         `;
 
