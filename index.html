@@ -104,6 +104,20 @@
                     </div>
                     <input type="range" id="frameSlider" min="5" max="250" value="25" class="w-full">
                 </div>
+                <div id="nightControls" class="hidden grid grid-cols-3 gap-2 pt-1">
+                    <label class="text-[10px] text-neutral-300 font-mono">LUZ
+                        <input type="range" id="nightLightSlider" min="0" max="100" value="14" class="w-full">
+                        <span id="nightLightValue" class="block text-amber-400 text-[10px] text-center">0.14</span>
+                    </label>
+                    <label class="text-[10px] text-neutral-300 font-mono">CAMBIO
+                        <input type="range" id="nightDiffSlider" min="0" max="100" value="8" class="w-full">
+                        <span id="nightDiffValue" class="block text-amber-400 text-[10px] text-center">0.08</span>
+                    </label>
+                    <label class="text-[10px] text-neutral-300 font-mono">GANANCIA
+                        <input type="range" id="nightGainSlider" min="25" max="200" value="100" class="w-full">
+                        <span id="nightGainValue" class="block text-amber-400 text-[10px] text-center">1.00</span>
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -148,6 +162,13 @@
         const progressBar = document.getElementById('progressBar');
         const progressPercent = document.getElementById('progressPercent');
         const configPanel = document.getElementById('configPanel');
+        const nightControls = document.getElementById('nightControls');
+        const nightLightSlider = document.getElementById('nightLightSlider');
+        const nightDiffSlider = document.getElementById('nightDiffSlider');
+        const nightGainSlider = document.getElementById('nightGainSlider');
+        const nightLightValue = document.getElementById('nightLightValue');
+        const nightDiffValue = document.getElementById('nightDiffValue');
+        const nightGainValue = document.getElementById('nightGainValue');
 
         let currentFacingMode = 'environment';
         let currentResMode = '720p'; // '720p' o '1080p'
@@ -262,35 +283,74 @@
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec2 c = v_texCoord - 0.5;
                 float d = length(c);
-
-                vec2 rCoord = c * (0.975 - d * 0.015) + 0.5;
-                vec2 gCoord = c * 0.975 + 0.5;
-                vec2 bCoord = c * (0.975 + d * 0.015) + 0.5;
-
+                vec2 rCoord = c * (0.99 - d * 0.015) + 0.5;
+                vec2 gCoord = c * 0.99 + 0.5;
+                vec2 bCoord = c * (0.99 + d * 0.015) + 0.5;
                 vec3 accum = vec3(
                     texture2D(u_accumulatedFrame, rCoord).r,
                     texture2D(u_accumulatedFrame, gCoord).g,
                     texture2D(u_accumulatedFrame, bCoord).b
                 );
-
-                vec3 result = max(current.rgb, accum * 0.95);
-                gl_FragColor = vec4(result, 1.0);
+                gl_FragColor = vec4(max(current.rgb, accum * 0.95), 1.0);
             }
         `;
 
+        // Luces nocturnas: el buffer guarda SOLO luces detectadas, no el fondo.
+        // Esto evita que un pequeño movimiento del teléfono arrastre toda la escena.
+        const fsNightTrails = `
+            precision mediump float;
+            uniform sampler2D u_currentFrame;
+            uniform sampler2D u_accumulatedFrame;
+            uniform sampler2D u_backgroundFrame;
+            uniform float u_lightThreshold;
+            uniform float u_difference;
+            uniform float u_gain;
+            varying vec2 v_texCoord;
+
+            float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+
+            void main() {
+                vec3 c = texture2D(u_currentFrame, v_texCoord).rgb;
+                vec3 b = texture2D(u_backgroundFrame, v_texCoord).rgb;
+                vec3 a = texture2D(u_accumulatedFrame, v_texCoord).rgb;
+                vec3 d = max(c - b, 0.0);
+                float lc = luma(c), ld = luma(d);
+                float bright = smoothstep(u_lightThreshold, u_lightThreshold + 0.06, lc);
+                float change = smoothstep(u_difference, u_difference + 0.04, ld);
+                float mask = bright * change;
+                vec3 light = d * (mask * u_gain);
+
+                // Elegir el frame más fuerte en vez de sumarlo: la luz roja no blanquea.
+                gl_FragColor = vec4(luma(light) > luma(a) ? light : a, 1.0);
+            }
+        `;
+
+        // Composición final: fondo original + estela acumulada.
+        const fsNightOutput = `
+            precision mediump float;
+            uniform sampler2D u_backgroundFrame;
+            uniform sampler2D u_accumulatedFrame;
+            varying vec2 v_texCoord;
+            void main() {
+                vec3 b = texture2D(u_backgroundFrame, v_texCoord).rgb;
+                vec3 t = texture2D(u_accumulatedFrame, v_texCoord).rgb;
+                gl_FragColor = vec4(min(b + t, 1.0), 1.0);
+            }
+        `;
 
         const shaderModes = [
             { name: '1.PROMEDIO', fs: fsAverage, class: 'text-white-400 font-bold' },
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
             { name: '4.COLORES', fs: fsOverlay, class: 'text-purple-400 font-bold' },
-            { name: '5.IRRADIAR', fs: fsRadialZoom, class: 'text-cyan-400 font-bold' }
+            { name: '5.IRRADIAR', fs: fsRadialZoom, class: 'text-cyan-400 font-bold' },
+            { name: '6.NOCHE', fs: fsNightTrails, class: 'text-red-400 font-bold', night: true }
         ];
         let currentShaderIndex = 0;
 
-        let passProgram, blendProgram;
+        let passProgram, blendProgram, nightOutputProgram;
         let textures = [], framebuffers = [];
-        let videoTexture = null;
+        let videoTexture = null, backgroundTexture = null;
         let pingPongCount = 0;
 
         function createShader(gl, type, source) {
@@ -321,8 +381,10 @@
 
             passProgram = createProgram(vsSource, fsPassthrough);
             blendProgram = createProgram(vsSource, shaderModes[currentShaderIndex].fs);
+            nightOutputProgram = createProgram(vsSource, fsNightOutput);
 
             videoTexture = gl.createTexture();
+            backgroundTexture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -361,24 +423,38 @@
                 framebuffers.push(fb);
             }
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+            gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        }
+
+        function drawToScreen(tex) {
+            const night = shaderModes[currentShaderIndex].night && backgroundTexture;
+            const prog = night ? nightOutputProgram : passProgram;
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.useProgram(prog);
+            const pos = gl.getAttribLocation(prog, 'a_position');
+            gl.enableVertexAttribArray(pos);
+            gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.uniform1i(gl.getUniformLocation(prog, 'u_' + (night ? 'accumulatedFrame' : 'currentFrame')), 0);
+            if (night) {
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+                gl.uniform1i(gl.getUniformLocation(prog, 'u_backgroundFrame'), 1);
+            }
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
 
         function renderCapturedResult() {
             if (textures.length === 0) return;
-            const finalIdx = (pingPongCount) % 2;
+            drawToScreen(textures[pingPongCount % 2]);
 
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.useProgram(passProgram);
-
-            const posLocPass = gl.getAttribLocation(passProgram, "a_position");
-            gl.enableVertexAttribArray(posLocPass);
-            gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
-
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, textures[finalIdx]);
-            gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
-
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
 
         function handleResize() {
@@ -509,18 +585,28 @@
             gl.bindTexture(gl.TEXTURE_2D, videoTexture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
-            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
-            gl.useProgram(passProgram);
-
-            const posLoc = gl.getAttribLocation(passProgram, "a_position");
-            gl.enableVertexAttribArray(posLoc);
-            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-            gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
-
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            // El primer frame queda como fondo de referencia en modo NOCHE.
+            if (shaderModes[currentShaderIndex].night) {
+                gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
+                gl.clearColor(0, 0, 0, 1);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                drawToScreen(textures[0]);
+            } else {
+                gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[0]);
+                gl.useProgram(passProgram);
+                const posLoc = gl.getAttribLocation(passProgram, "a_position");
+                gl.enableVertexAttribArray(posLoc);
+                gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+                gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                drawToScreen(textures[0]);
+            }
 
             processFrame();
         });
@@ -551,20 +637,17 @@
             gl.bindTexture(gl.TEXTURE_2D, textures[readIdx]);
             gl.uniform1i(gl.getUniformLocation(blendProgram, "u_accumulatedFrame"), 1);
 
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.useProgram(passProgram);
-
-            const posLocPass = gl.getAttribLocation(passProgram, "a_position");
-            gl.enableVertexAttribArray(posLocPass);
-            gl.vertexAttribPointer(posLocPass, 2, gl.FLOAT, false, 0, 0);
-
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, textures[writeIdx]);
-            gl.uniform1i(gl.getUniformLocation(passProgram, "u_currentFrame"), 0);
+            if (shaderModes[currentShaderIndex].night) {
+                gl.activeTexture(gl.TEXTURE2);
+                gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+                gl.uniform1i(gl.getUniformLocation(blendProgram, "u_backgroundFrame"), 2);
+                gl.uniform1f(gl.getUniformLocation(blendProgram, "u_lightThreshold"), nightLightSlider.value / 100);
+                gl.uniform1f(gl.getUniformLocation(blendProgram, "u_difference"), nightDiffSlider.value / 100);
+                gl.uniform1f(gl.getUniformLocation(blendProgram, "u_gain"), nightGainSlider.value / 100);
+            }
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            drawToScreen(textures[writeIdx]);
 
             pingPongCount++;
 
@@ -607,14 +690,29 @@
         frameSlider.addEventListener('input', (e) => {
             frameCountValue.textContent = `${e.target.value} frames`;
         });
-btnShaderMode.addEventListener('click', () => {
+        function syncNightControls() {
+            const on = !!shaderModes[currentShaderIndex].night;
+            nightControls.classList.toggle('hidden', !on);
+        }
+
+        function syncNightValues() {
+            nightLightValue.textContent = (nightLightSlider.value / 100).toFixed(2);
+            nightDiffValue.textContent = (nightDiffSlider.value / 100).toFixed(2);
+            nightGainValue.textContent = (nightGainSlider.value / 100).toFixed(2);
+        }
+        [nightLightSlider, nightDiffSlider, nightGainSlider].forEach(el => el.addEventListener('input', syncNightValues));
+        syncNightValues();
+
+        btnShaderMode.addEventListener('click', () => {
             currentShaderIndex = (currentShaderIndex + 1) % shaderModes.length;
             const current = shaderModes[currentShaderIndex];
             shaderLabel.textContent = current.name;
             shaderLabel.className = current.class;
-
             blendProgram = createProgram(vsSource, current.fs);
+            syncNightControls();
         });
+
+        syncNightControls();
 
         btnRes.addEventListener('click', () => {
             if (isCapturing) return;
