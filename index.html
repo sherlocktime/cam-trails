@@ -200,15 +200,20 @@
                 vec4 current = texture2D(u_currentFrame, v_texCoord);
                 vec4 accum = texture2D(u_accumulatedFrame, v_texCoord);
 
+                // Realce de las luces del frame actual
+                current.rgb = pow(current.rgb, vec3(0.7));
+
+                // Acumulación independiente por canal
                 vec3 result;
 
-                result.r = max(current.r, accum.r);
-                result.g = max(current.g, accum.g);
-                result.b = max(current.b, accum.b);
+                result.r = max(current.r, accum.r * 0.99);
+                result.g = max(current.g, accum.g * 0.99);
+                result.b = max(current.b, accum.b * 0.99);
 
                 gl_FragColor = vec4(result, current.a);
             }
         `;
+
 
         // Shader: Sombras
         const fsShadow = `
