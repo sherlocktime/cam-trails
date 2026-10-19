@@ -190,7 +190,7 @@
         `;
 
         // Shader: Estelas
-        const fsLight_original = `
+        const fsLight = `
             precision mediump float;
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
@@ -210,9 +210,8 @@
             }
         `;
 
-
         // Shader: Estelas con extracción de luces
-        const fsLight = `
+        const fsLight_2 = `
             precision mediump float;
 
             uniform sampler2D u_currentFrame;
@@ -263,8 +262,6 @@
                 gl_FragColor = vec4(result, 1.0);
             }
         `;
-
-
 
         // Shader: Sombras
         const fsShadow = `
@@ -346,7 +343,8 @@
             { name: '2.ESTELAS', fs: fsLight, class: 'text-amber-400 font-bold' },
             { name: '3.SOMBRAS', fs: fsShadow, class: 'text-rose-400 font-bold' },
             { name: '4.COLORES', fs: fsOverlay, class: 'text-purple-400 font-bold' },
-            { name: '5.IRRADIAR', fs: fsRadialZoom, class: 'text-cyan-400 font-bold' }
+            { name: '5.IRRADIAR', fs: fsRadialZoom, class: 'text-cyan-400 font-bold' },
+            { name: '6.TESTELAS', fs: fsLight_2, class: 'text-amber-400 font-bold' }
         ];
         let currentShaderIndex = 0;
 
