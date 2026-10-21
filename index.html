@@ -210,56 +210,31 @@
             }
         `;
 
-        // Shader: Estelas con extracción de luces
+        // Shader: Estelas (versión agresiva, valores fijos)
         const fsLight_2 = `
             precision mediump float;
-
             uniform sampler2D u_currentFrame;
             uniform sampler2D u_accumulatedFrame;
-
             varying vec2 v_texCoord;
 
+            const float THRESHOLD = 0.75; // umbral de brillo
+            const float SOFTNESS  = 0.08; // ancho de la transición
+            const float GAMMA     = 3.0;  // curva (más alto = más agresivo)
+            const float GAIN      = 1.2;  // ganancia de las luces
+
             void main() {
-                vec4 current = texture2D(
-                    u_currentFrame,
-                    v_texCoord
-                );
+                vec4 current = texture2D(u_currentFrame, v_texCoord);
+                vec4 accum   = texture2D(u_accumulatedFrame, v_texCoord);
 
-                vec4 accum = texture2D(
-                    u_accumulatedFrame,
-                    v_texCoord
-                );
+                float lum = dot(current.rgb, vec3(0.2126, 0.7152, 0.0722));
 
-                // 1. Calcular luminosidad del frame actual
-                float luma = dot(
-                    current.rgb,
-                    vec3(0.299, 0.587, 0.114)
-                );
+                float mask = smoothstep(THRESHOLD, THRESHOLD + SOFTNESS, lum);
+                mask = pow(mask, GAMMA);
 
-                // 2. Seleccionar las zonas luminosas
-                float threshold = 0.18;
-                float mask = smoothstep(
-                    threshold,
-                    threshold + 0.20,
-                    luma
-                );
+                vec3 lights = current.rgb * mask * GAIN;
+                vec3 result = max(accum.rgb, lights);
 
-                // 3. Aumentar el contraste mediante una curva tonal
-                vec3 enhanced = pow(
-                    current.rgb,
-                    vec3(0.65)
-                );
-
-                // 4. Reducir el aporte de las zonas oscuras
-                vec3 lights = enhanced * mask;
-
-                // 5. Acumular las luces a lo largo del tiempo
-                vec3 result = max(
-                    accum.rgb,
-                    lights
-                );
-
-                gl_FragColor = vec4(result, 1.0);
+                gl_FragColor = vec4(result, current.a);
             }
         `;
 
